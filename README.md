@@ -27,9 +27,12 @@ of the backward propagator is approximated by
 
 psi(x) = sum_i r_i chi_i(x)
 
+Package functionalities:
+------------------------
+
 This package aims at providing code to help addressing a number of key problems:
 
-1. Basis sets for molecular dynamics (MD), and in particular protein dynamics. See [5]_ for a
+1. Basis sets for molecular dynamics (MD), and in particular protein dynamics. See [5] for a
    first approach in this direction.
 
 2. Estimators for the corration matrices C(0), C(tau). The trivial time-average that is usually
@@ -38,11 +41,24 @@ This package aims at providing code to help addressing a number of key problems:
 
 3. Solvers for accurately solving the eigenvalue problem above, even for huge basis sets. 
 
-At this time only a few of these functionalities are implemented and we will go step by step.
+At this time only a few of the above functionalities are implemented and we will go step by step.
 This package will undergo heavy development and there is currently no date for an official
 release, so don't be surprised if the API (the look + feel of functions and classes) change.
 At the moment this package is purely intended for development purposes, so use it at your own
 risk.
+
+Applications:
+-------------
+1. The time-lagged independent component analysis (TICA) method originally developed in [6] and
+   proposed as an optimal data transformation method for building Markov state models of MD
+   in [3,7] is a VAC with mean-free basis functions. Therefore you can easily implement TICA with
+   this package.
+
+2. By transforming the internal coordinates such as torsion angles or interatomic distances into
+   suitable basis functions, you can approximate experimentally-measurable relaxation timescales
+   and determine the corresponding structural rearrangements for peptides and proteins [2,5]
+
+3. ... more will follow.
 
 References
 ----------
@@ -56,3 +72,6 @@ References
 
 [5] Vitalini, F., Noé, F. and Keller, B. (2015): A basis set for peptides for the variational approach to conformational kinetics. (In review).
 
+[6] Molgedey, L. and Schuster H. G. (1994): Phys. Rev. Lett. 72, 3634.
+
+[7] Schwantes, C. R. and Pande, V. S. (2000): J. Chem. Theory Comput. 9, 2000
