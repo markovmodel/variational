@@ -27,8 +27,8 @@ of the backward propagator is approximated by
 
 psi(x) = sum_i r_i chi_i(x)
 
-Package functionalities:
-------------------------
+Package functionalities
+-----------------------
 
 This package aims at providing code to help addressing a number of key problems:
 
@@ -47,8 +47,8 @@ release, so don't be surprised if the API (the look + feel of functions and clas
 At the moment this package is purely intended for development purposes, so use it at your own
 risk.
 
-Applications:
--------------
+Applications
+------------
 1. The time-lagged independent component analysis (TICA) method originally developed in [6] and
    proposed as an optimal data transformation method for building Markov state models of MD
    in [3,7] is a VAC with mean-free basis functions. Therefore you can easily implement TICA with
