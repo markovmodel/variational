@@ -74,4 +74,4 @@ References
 
 [6] Molgedey, L. and Schuster H. G. (1994): Phys. Rev. Lett. 72, 3634.
 
-[7] Schwantes, C. R. and Pande, V. S. (2000): J. Chem. Theory Comput. 9, 2000
+[7] Schwantes, C. R. and Pande, V. S. : J. Chem. Theory Comput. 9, (2013)
