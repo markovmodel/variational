@@ -20,10 +20,7 @@ class LaggedCorrelation:
         # Initialize the two correlation matrices:
         self.Ct = np.zeros((self.output_dimension, self.output_dimension))
         self.C0 = np.zeros((self.output_dimension, self.output_dimension))
-        # Also initialize the mean:
-        self.mu = np.zeros(self.output_dimension)
-        # Create counter for the frames used for mu, C0, Ct:
-        self.nmu = 0
+        # Create counter for the frames used for C0, Ct:
         self.nC0 = 0
         self.nCt = 0
 
@@ -37,32 +34,28 @@ class LaggedCorrelation:
 
         """
         # Raise an error if output dimension is wrong:
-        
-        # Get the trajectory length:
-        TX = X.shape[0]
-        # # Update the mean:
-        self.mu += np.sum(X,axis=0)
-        self.nmu += TX
+        if not (X.shape[1] == self.output_dimension):
+            raise Exception("Number of basis functions is incorrect."+
+                            "Got %d, expected %d."%(X.shape[1],
+                                                    self.output_dimension))
+        # Print message if number of time steps is too small:
+        if X.shape <= self.tau:
+            print "Number of time steps is too small."
+            pass
+        # Get the time-lagged data:
+        Y1 = X[self.tau:,:]
+        # Remove the last tau frames from X:
+        Y2 = X[:-self.tau,:]
+        # Get the number of time steps in this trajectory:
+        TX = 1.0*Y1.shape[0]
+        # Update time-lagged correlation matrix:
+        self.Ct += np.dot(Y1.T,Y2)
+        self.nCt += TX
         # Update the instantaneous correlation matrix:
-        self.C0 += np.dot(X.T,X)
-        self.nC0 += TX
-        # Update time lagged correlation matrix:
-        Y = X[self.tau:,:]
-        self.Ct += np.dot(X.T,Y)
-        self.nCt += TX - self.tau
+        self.C0 += np.dot(Y1.T,Y1) + np.dot(Y2.T,Y2)
+        self.nC0 += 2*TX
 
-    def mean(self):
-        """ Returns the mean.
-
-        Returns
-        -------
-        mu: ndarray (N,)
-            array of mean values for each of the N basis function.
-
-        """
-        return self.mu/self.nmu
-
-    def C0(self):
+    def GetC0(self):
         """ Returns the current estimate of C0:
 
         Returns
@@ -71,9 +64,9 @@ class LaggedCorrelation:
             time instantaneous correlation matrix of N basis function.
 
         """
-        return self.C0/self.nC0
+        return 0.5*(self.C0 + self.C0.T)/(self.nC0 - 1)
 
-    def Ctau(self):
+    def GetCt(self):
         """ Returns the current estimate of Ctau
 
         Returns
@@ -82,4 +75,4 @@ class LaggedCorrelation:
             time lagged correlation matrix of N basis function.
 
         """
-        return self.Ct/self.nCt
+        return 0.5*(self.Ct + self.Ct.T)/(self.nCt - 1)
