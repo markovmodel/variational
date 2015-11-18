@@ -3,6 +3,7 @@ __author__ = 'noe'
 import math, sys, numbers
 import numpy as np
 from variational.estimators.covar_c import covartools
+import warnings
 
 
 def _covar_dense(X, Y, symmetrize=False):
@@ -157,7 +158,7 @@ def _sum_sparse(xsum, mask_X, xconst):
     return s
 
 
-def moments_XX(X, remove_mean=False, modify_data=False, min_const_cols_sparse=600, sparse_tol=0):
+def moments_XX(X, remove_mean=False, modify_data=False, min_const_cols_sparse=600, sparse_tol=0.0):
     """ Computes the first two unnormalized moments of X
 
     Computes :math:`s = \sum_t x_t` and :math:`C = X^\top X` while exploiting
@@ -200,14 +201,11 @@ def moments_XX(X, remove_mean=False, modify_data=False, min_const_cols_sparse=60
 
     # DETERMINE SPARSITY
     if N > min_const_cols_sparse:
-        mask_X = covartools.nonconstant_cols(X, sparse_tol)  # 1/0 vector where 0 is constant and 1 is variable
-        const_cols_X = np.where(~mask_X)[0]
-        var_cols_X = np.where(mask_X)[0]
-        sparse_mode = len(const_cols_X) > min_const_cols_sparse
+        mask_X = covartools.variable_cols(X, tol=sparse_tol, min_constant=min_const_cols_sparse)  # bool vector
+        nconst = np.where(~mask_X)[0]
+        sparse_mode = len(nconst) > min_const_cols_sparse
     else:
         mask_X = None
-        const_cols_X = None
-        var_cols_X = None
         sparse_mode = False
 
     #print 'sparse mode = ', sparse_mode
@@ -218,7 +216,7 @@ def moments_XX(X, remove_mean=False, modify_data=False, min_const_cols_sparse=60
     if sparse_mode:
         #print 'subselecting'
         #sys.stdout.flush()
-        X0 = X0[:, var_cols_X]  # shrink matrix to variable part
+        X0 = X0[:, mask_X]  # shrink matrix to variable part
 
     #print 'subselected: ', str(X0.shape)
     #sys.stdout.flush()
@@ -263,7 +261,7 @@ def moments_XX(X, remove_mean=False, modify_data=False, min_const_cols_sparse=60
     # COVARIANCE MATRIX
     if sparse_mode:
         if remove_mean:
-            xconst = X[0, const_cols_X].astype(np.float64)
+            xconst = X[0, ~mask_X].astype(dtype)
         #print 'sum sparse'
         #sys.stdout.flush()
         xsum = _sum_sparse(x0sum_before, mask_X, xconst)
@@ -279,7 +277,7 @@ def moments_XX(X, remove_mean=False, modify_data=False, min_const_cols_sparse=60
     return xsum, C
 
 
-def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, min_const_cols_sparse=600, sparse_tol=0):
+def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, min_const_cols_sparse=600, sparse_tol=0.0):
     """ Computes the first two unnormalized moments of X and Y
 
     If symmetrize is False, computes
@@ -342,28 +340,22 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, m
 
     # DETERMINE SPARSITY
     if M > min_const_cols_sparse and N > min_const_cols_sparse:
-        mask_X = covartools.nonconstant_cols(X, sparse_tol)  # 1/0 vector where 0 is constant and 1 is variable
-        const_cols_X = np.where(~mask_X)[0]
-        var_cols_X = np.where(mask_X)[0]
-        mask_Y = covartools.nonconstant_cols(Y, sparse_tol)  # 1/0 vector where 0 is constant and 1 is variable
-        const_cols_Y = np.where(~mask_Y)[0]
-        var_cols_Y = np.where(mask_Y)[0]
-        sparse_mode = math.sqrt(len(const_cols_X)*len(const_cols_X)) > min_const_cols_sparse
+        mask_X = covartools.variable_cols(X, tol=sparse_tol, min_constant=min_const_cols_sparse)  # bool vector
+        nconst_X = np.where(~mask_X)[0]
+        mask_Y = covartools.variable_cols(Y, tol=sparse_tol, min_constant=min_const_cols_sparse)  # bool vector
+        nconst_Y = np.where(~mask_Y)[0]
+        sparse_mode = math.sqrt(nconst_X*nconst_Y) > min_const_cols_sparse
     else:
         mask_X = None
-        const_cols_X = None
-        var_cols_X = None
         mask_Y = None
-        const_cols_Y = None
-        var_cols_Y = None
         sparse_mode = False
 
     # SUBSELECT DATA
     X0 = X  # X0 is the data matrix we will work with
     Y0 = Y  # X0 is the data matrix we will work with
     if sparse_mode:
-        X0 = X0[:, var_cols_X]  # shrink matrix to variable part
-        Y0 = Y0[:, var_cols_Y]  # shrink matrix to variable part
+        X0 = X0[:, mask_X]  # shrink matrix to variable part
+        Y0 = Y0[:, mask_Y]  # shrink matrix to variable part
 
     # CONVERT DATA FORMAT FOR EFFICIENT CALCULATION
     dtype = np.float64  # default: convert to float64 in order to avoid cancellation errors
@@ -413,8 +405,8 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, m
     # COVARIANCE MATRIX
     if sparse_mode:
         if remove_mean:
-            xconst = X[0, const_cols_X].astype(np.float64)
-            yconst = Y[0, const_cols_Y].astype(np.float64)
+            xconst = X[0, ~mask_X].astype(dtype)
+            yconst = Y[0, ~mask_Y].astype(dtype)
         xsum = _sum_sparse(x0sum_before, mask_X, xconst)
         ysum = _sum_sparse(y0sum_before, mask_Y, yconst)
         C0 = _covar_sparse(X0, mask_X, X0, mask_X,
@@ -480,7 +472,7 @@ class Moments(object):
         return self.M / (self.w-1)
 
 
-class MomentsStorage:
+class MomentsStorage(object):
     """
     """
 
@@ -524,3 +516,72 @@ class MomentsStorage:
             self.storage[-1].combine(M)
         # print 'return first element'
         return self.storage[0]
+
+
+class RunningCovar(object):
+    """
+    """
+
+    def __init__(self, compute_XX=True, compute_XY=False, compute_YY=False,
+                 remove_mean=False, symmetrize=False,
+                 nsave=5):
+        # check input
+        if not compute_XX and not compute_XY:
+            raise ValueError('One of compute_XX or compute_XY must be True.')
+        if symmetrize and not compute_XY:
+            warnings.warn('symmetrize=True has no effect with compute_XY=False.')
+        # storage
+        self.compute_XX = compute_XX
+        if compute_XX:
+            self.storage_XX = MomentsStorage(nsave)
+        self.compute_XY = compute_XY
+        if compute_XY:
+            self.storage_XY = MomentsStorage(nsave)
+        self.compute_YY = compute_YY
+        if compute_YY:
+            raise NotImplementedError('Currently not implemented')
+        # symmetry
+        self.remove_mean = remove_mean
+        self.symmetrize = symmetrize
+
+
+    def add(self, X, Y=None):
+        # check input
+        T = X.shape[0]
+        if Y is not None:
+            assert Y.shape[0] == T, 'X and Y must have equal length'
+        # estimate and add to storage
+        if self.compute_XX and not self.compute_XY:
+            s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean)
+            self.storage_XX.store(Moments(T, s_X, C_XX))
+        elif self.compute_XX and self.compute_XY:
+            assert Y is not None
+            s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize)
+            self.storage_XX.store(Moments(T, s_X, C_XX))
+            self.storage_XY.store(Moments(T, s_X, C_XY))
+
+    def sum_X(self):
+        return self.storage_XX.moments.s
+
+    def mean_X(self):
+        return self.storage_XX.moments.mean
+
+    def moments_XX(self):
+        return self.storage_XX.moments.M
+
+    def cov_XX(self):
+        return self.storage_XX.moments.covar
+
+    def moments_XY(self):
+        return self.storage_XY.moments.M
+
+    def cov_XY(self):
+        return self.storage_XY.moments.covar
+
+    def sum_Y(self):
+        raise NotImplementedError('Currently not implemented')
+
+    def moments_YY(self):
+        raise NotImplementedError('Currently not implemented')
+
+

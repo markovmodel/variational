@@ -82,11 +82,12 @@ int* _bool_to_list(int* b, int N, int nnz)
 @param N : int
 
 */
-void _nonconstant_cols_char(int* cols, char* X, int M, int N)
+int _variable_cols_char(int* cols, char* X, int M, int N, int min_constant)
 {
         // compare first and last row to get constant candidates
         int i,j;
         int ro = (M-1)*N;
+        int nconstant = N;  // current number of constant columns
 
         // by default all 0 (constant)
         for (j=0; j<N; j++)
@@ -99,17 +100,32 @@ void _nonconstant_cols_char(int* cols, char* X, int M, int N)
                 for (j=0; j<N; j++)
                 {
                         if (X[j] != X[ro+j])
-                                cols[j] = 1;
+                        {
+                                if (cols[j] == 0)
+                                {
+                                        cols[j] = 1;
+                                        nconstant--;
+                                        // are constant columns below threshold? Then interrupt.
+                                        if (nconstant < min_constant)
+                                                return 0;
+                                        // do we have 0 constant columns? Then we can stop regularly.
+                                        if (nconstant == 0)
+                                                return 1;
+                                }
+                        }
                 }
         }
+
+        return 1;
 }
 
 /** see above */
-void _nonconstant_cols_int(int* cols, int* X, int M, int N)
+int _variable_cols_int(int* cols, int* X, int M, int N, int min_constant)
 {
         // compare first and last row to get constant candidates
         int i,j;
         int ro = (M-1)*N;
+        int nconstant = N;  // current number of constant columns
 
         // by default all 0 (constant)
         for (j=0; j<N; j++)
@@ -122,17 +138,32 @@ void _nonconstant_cols_int(int* cols, int* X, int M, int N)
                 for (j=0; j<N; j++)
                 {
                         if (X[j] != X[ro+j])
-                                cols[j] = 1;
+                        {
+                                if (cols[j] == 0)
+                                {
+                                        cols[j] = 1;
+                                        nconstant--;
+                                        // are constant columns below threshold? Then interrupt.
+                                        if (nconstant < min_constant)
+                                                return 0;
+                                        // do we have 0 constant columns? Then we can stop regularly.
+                                        if (nconstant == 0)
+                                                return 1;
+                                }
+                        }
                 }
         }
+
+        return 1;
 }
 
 /** see above */
-void _nonconstant_cols_long(int* cols, long* X, int M, int N)
+int _variable_cols_long(int* cols, long* X, int M, int N, int min_constant)
 {
         // compare first and last row to get constant candidates
         int i,j;
         int ro = (M-1)*N;
+        int nconstant = N;  // current number of constant columns
 
         // by default all 0 (constant)
         for (j=0; j<N; j++)
@@ -145,17 +176,32 @@ void _nonconstant_cols_long(int* cols, long* X, int M, int N)
                 for (j=0; j<N; j++)
                 {
                         if (X[j] != X[ro+j])
-                                cols[j] = 1;
+                        {
+                                if (cols[j] == 0)
+                                {
+                                        cols[j] = 1;
+                                        nconstant--;
+                                        // are constant columns below threshold? Then interrupt.
+                                        if (nconstant < min_constant)
+                                                return 0;
+                                        // do we have 0 constant columns? Then we can stop regularly.
+                                        if (nconstant == 0)
+                                                return 1;
+                                }
+                        }
                 }
         }
+
+        return 1;
 }
 
 /** see above */
-void _nonconstant_cols_float(int* cols, float* X, int M, int N)
+int _variable_cols_float(int* cols, float* X, int M, int N, int min_constant)
 {
         // compare first and last row to get constant candidates
         int i,j;
         int ro = (M-1)*N;
+        int nconstant = N;  // current number of constant columns
 
         // by default all 0 (constant)
         for (j=0; j<N; j++)
@@ -168,17 +214,32 @@ void _nonconstant_cols_float(int* cols, float* X, int M, int N)
                 for (j=0; j<N; j++)
                 {
                         if (X[j] != X[ro+j])
-                                cols[j] = 1;
+                        {
+                                if (cols[j] == 0)
+                                {
+                                        cols[j] = 1;
+                                        nconstant--;
+                                        // are constant columns below threshold? Then interrupt.
+                                        if (nconstant < min_constant)
+                                                return 0;
+                                        // do we have 0 constant columns? Then we can stop regularly.
+                                        if (nconstant == 0)
+                                                return 1;
+                                }
+                        }
                 }
         }
+
+        return 1;
 }
 
 /** see above */
-void _nonconstant_cols_double(int* cols, double* X, int M, int N)
+int _variable_cols_double(int* cols, double* X, int M, int N, int min_constant)
 {
         // compare first and last row to get constant candidates
         int i,j;
         int ro = (M-1)*N;
+        int nconstant = N;  // current number of constant columns
 
         // by default all 0 (constant)
         for (j=0; j<N; j++)
@@ -191,9 +252,23 @@ void _nonconstant_cols_double(int* cols, double* X, int M, int N)
                 for (j=0; j<N; j++)
                 {
                         if (X[j] != X[ro+j])
-                                cols[j] = 1;
+                        {
+                                if (cols[j] == 0)
+                                {
+                                        cols[j] = 1;
+                                        nconstant--;
+                                        // are constant columns below threshold? Then interrupt.
+                                        if (nconstant < min_constant)
+                                                return 0;
+                                        // do we have 0 constant columns? Then we can stop regularly.
+                                        if (nconstant == 0)
+                                                return 1;
+                                }
+                        }
                 }
         }
+
+        return 1;
 }
 
 /** Checks each column whether it is approximately constant in the rows or not
@@ -205,12 +280,13 @@ void _nonconstant_cols_double(int* cols, double* X, int M, int N)
 @param tol : maximum difference of any row to the first row to be still considered equal.
 
 */
-void _nonconstant_cols_float_approx(int* cols, float* X, int M, int N, float tol)
+int _variable_cols_float_approx(int* cols, float* X, int M, int N, float tol, int min_constant)
 {
         // compare first and last row to get constant candidates
         int i,j;
         int ro = (M-1)*N;
-        double diff;
+        float diff;
+        int nconstant = N;  // current number of constant columns
 
         // by default all 0 (constant)
         for (j=0; j<N; j++)
@@ -224,18 +300,33 @@ void _nonconstant_cols_float_approx(int* cols, float* X, int M, int N, float tol
                 {
                         diff = X[j] - X[ro+j];
                         if (diff > tol || -diff > tol)
-                                cols[j] = 1;
+                        {
+                                if (cols[j] == 0)
+                                {
+                                        cols[j] = 1;
+                                        nconstant--;
+                                        // are constant columns below threshold? Then interrupt.
+                                        if (nconstant < min_constant)
+                                                return 0;
+                                        // do we have 0 constant columns? Then we can stop regularly.
+                                        if (nconstant == 0)
+                                                return 1;
+                                }
+                        }
                 }
         }
+
+        return 1;
 }
 
 /** see above */
-void _nonconstant_cols_double_approx(int* cols, double* X, int M, int N, double tol)
+int _variable_cols_double_approx(int* cols, double* X, int M, int N, double tol, int min_constant)
 {
         // compare first and last row to get constant candidates
         int i,j;
         int ro = (M-1)*N;
         double diff;
+        int nconstant = N;  // current number of constant columns
 
         // by default all 0 (constant)
         for (j=0; j<N; j++)
@@ -249,7 +340,21 @@ void _nonconstant_cols_double_approx(int* cols, double* X, int M, int N, double 
                 {
                         diff = X[j] - X[ro+j];
                         if (diff > tol || -diff > tol)
-                                cols[j] = 1;
+                        {
+                                if (cols[j] == 0)
+                                {
+                                        cols[j] = 1;
+                                        nconstant--;
+                                        // are constant columns below threshold? Then interrupt.
+                                        if (nconstant < min_constant)
+                                                return 0;
+                                        // do we have 0 constant columns? Then we can stop regularly.
+                                        if (nconstant == 0)
+                                                return 1;
+                                }
+                        }
                 }
         }
+
+        return 1;
 }
