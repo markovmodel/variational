@@ -84,7 +84,9 @@ References
 """
 from __future__ import print_function
 import os
-from setuptools import setup
+import versioneer
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext as _build_ext
 from os.path import relpath, join
 import subprocess
 
@@ -184,6 +186,26 @@ def find_package_data(data_root, package_root):
             files.append(relpath(join(root, fn), package_root))
     return files
 
+################################################################################
+# EXTENSIONS
+################################################################################
+
+extensions = [Extension('variational.estimators.covar_c.covartools',
+                        sources = ['./variational/estimators/covar_c/covartools.pyx',
+                                   './variational/estimators/covar_c/_covartools.c'],
+                        include_dirs = ['./variational/estimators/covar_c/'],
+                        extra_compile_args=['-std=c99','-O3']),
+              ]
+
+class build_ext(_build_ext):
+    def initialize_options(self):
+        _build_ext.initialize_options(self)
+        import pkg_resources
+        dir = pkg_resources.resource_filename('numpy', 'core/include')
+        self.include_dirs = [dir]
+
+cmdclass = versioneer.get_cmdclass()
+cmdclass['build_ext'] = build_ext
 
 ################################################################################
 # SETUP
@@ -198,6 +220,7 @@ setup(
     description = DOCLINES[0],
     long_description = "\n".join(DOCLINES[2:]),
     version=__version__,
+    cmdclass=cmdclass,
     license='OpenBSD',
     url='https://github.com/markovmodel/variational',
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
@@ -206,8 +229,15 @@ setup(
     packages=['variational', 'variational.basissets', 'variational.estimators', 'variational.solvers'],
     zip_safe=False,
     install_requires=[
+        'cython',
         'numpy',
         'scipy',
         ],
+    setup_requires=[
+        'cython',
+        'numpy',
+        'scipy',
+        ],
+    ext_modules=extensions,
     )
 
