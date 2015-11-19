@@ -172,6 +172,7 @@ metadata=dict(
     install_requires=[
         'numpy',
         'scipy',
+        'six',
         ],
     setup_requires=[
         'cython',

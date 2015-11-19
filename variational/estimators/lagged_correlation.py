@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 __author__ = 'noe'
 
 import numpy as np
@@ -40,7 +42,7 @@ class LaggedCorrelation:
                                                     self.output_dimension))
         # Print message if number of time steps is too small:
         if X.shape <= self.tau:
-            print "Number of time steps is too small."
+            print("Number of time steps is too small.")
             pass
         # Get the time-lagged data:
         Y1 = X[self.tau:,:]

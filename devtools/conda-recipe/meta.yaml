@@ -14,12 +14,14 @@ requirements:
     - cython >=0.20
     - numpy >=1.7
     - scipy
+    - six
 
   run:
     - python
     - setuptools
     - numpy >=1.7
     - scipy
+    - six
 
 test:
   requires:
