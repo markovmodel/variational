@@ -166,14 +166,12 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=[
-        'cython',
         'numpy',
         'scipy',
         ],
     setup_requires=[
         'cython',
         'numpy',
-        'scipy',
         ],
     ext_modules=lazy_cythonize(extensions),
     )

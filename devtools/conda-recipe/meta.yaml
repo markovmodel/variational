@@ -1,0 +1,30 @@
+package:
+  name: variational 
+  version: !!str dev
+source:
+  path: ../..
+
+build:
+  preserve_egg_dir: True
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - cython >=0.20
+    - numpy >=1.7
+    - scipy
+
+  run:
+    - python
+    - setuptools
+    - numpy >=1.7
+    - scipy
+
+test:
+  requires:
+    - nose
+    - coverage
+  imports:
+    - variational 
+
