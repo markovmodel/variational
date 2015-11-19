@@ -87,7 +87,6 @@ import os
 import versioneer
 from setuptools import setup, Extension, find_packages
 from os.path import relpath, join
-import subprocess
 
 DOCLINES = __doc__.split("\n")
 
@@ -122,16 +121,16 @@ def find_package_data(data_root, package_root):
 ################################################################################
 
 def extensions():
-   from numpy import get_include as np_inc
-   np_inc = np_inc()
-   from Cython.Build import cythonize
-   exts = [Extension('variational.estimators.covar_c.covartools',
-                        sources = ['./variational/estimators/covar_c/covartools.pyx',
-                                   './variational/estimators/covar_c/_covartools.c'],
-                        include_dirs = ['./variational/estimators/covar_c/', np_inc],
-                        extra_compile_args=['-std=c99','-O3']),
-              ]
-   return cythonize(exts)
+    from numpy import get_include as np_inc
+    np_inc = np_inc()
+    from Cython.Build import cythonize
+    exts = [Extension('variational.estimators.covar_c.covartools',
+                         sources = ['./variational/estimators/covar_c/covartools.pyx',
+                                    './variational/estimators/covar_c/_covartools.c'],
+                         include_dirs = ['./variational/estimators/covar_c/', np_inc],
+                         extra_compile_args=['-std=c99','-O3']),
+               ]
+    return cythonize(exts)
 
 
 class lazy_cythonize(list):
