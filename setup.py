@@ -219,7 +219,7 @@ setup(
     author_email = 'frank.noe@fu-berlin.de',
     description = DOCLINES[0],
     long_description = "\n".join(DOCLINES[2:]),
-    version=__version__,
+    version=versioneer.get_version(),
     cmdclass=cmdclass,
     license='OpenBSD',
     url='https://github.com/markovmodel/variational',

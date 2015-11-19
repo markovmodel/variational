@@ -1,0 +1,2 @@
+include versioneer.py
+include variational/_version.py

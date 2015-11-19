@@ -3,6 +3,7 @@
 *.so
 build
 variational.egg-info
+dist
 
 # project files
 .idea
