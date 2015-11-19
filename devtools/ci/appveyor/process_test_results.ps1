@@ -25,7 +25,7 @@ function run {
     $stylesheet =  "devtools/ci/appveyor/transform_xunit_to_appveyor.xsl"
     $input = "nosetests.xml"
     $output = "transformed.xml"
-    if ( -not File-Path $input) {
+    if ( -not Test-Path $input ) {
        throw "input file missing"
     } 
     xslt_transform $input $stylesheet $output
