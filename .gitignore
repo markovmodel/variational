@@ -1,8 +1,12 @@
 # compiled files
 *.pyc
+*.so
+build
+variational.egg-info
 
 # project files
 .idea
 
 # generated files
 variational/version.py
+variational/estimators/covar_c/covartools.c
