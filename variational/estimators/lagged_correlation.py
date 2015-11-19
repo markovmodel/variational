@@ -42,8 +42,8 @@ class LaggedCorrelation(object):
                                                     self.output_dimension))
         # Print message if number of time steps is too small:
         if X.shape[0] <= self.tau:
-            print("Number of time steps is too small.")
-            pass
+            raise ValueError("Number of time steps is too small.")
+
         # Get the time-lagged data:
         Y1 = X[self.tau:,:]
         # Remove the last tau frames from X:
