@@ -123,6 +123,7 @@ def find_package_data(data_root, package_root):
 
 def extensions():
    from numpy import get_include as np_inc
+   np_inc = np_inc()
    from Cython.Build import cythonize
    exts = [Extension('variational.estimators.covar_c.covartools',
                         sources = ['./variational/estimators/covar_c/covartools.pyx',
@@ -150,7 +151,7 @@ class lazy_cythonize(list):
 # SETUP
 ################################################################################
 
-setup(
+metadata=dict(
     name = 'variational',
     author = 'Frank Noe, Fabian Paul and Feliks Nueske',
     author_email = 'frank.noe@fu-berlin.de',
@@ -162,19 +163,22 @@ setup(
     url='https://github.com/markovmodel/variational',
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
     classifiers=CLASSIFIERS.splitlines(),
-    package_dir={'variational': 'variational'},
+    #package_dir={'variational': 'variational'},
     packages=find_packages(),
+    package_data={'variational.basisset':['ResiduesEigenvectors/*'],
+                  'variational.estimators.tests':['TestData.npz'],
+                  },
     zip_safe=False,
     install_requires=[
-        'cython',
         'numpy',
         'scipy',
+        'six',
         ],
     setup_requires=[
         'cython',
         'numpy',
-        'scipy',
         ],
     ext_modules=lazy_cythonize(extensions),
     )
 
+setup(**metadata)

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 __author__ = 'noe'
 
 import time
@@ -42,14 +44,14 @@ def benchmark_moments_XX_sparse(remove_mean=False):
     table[5, :] = reftime / times
 
     # print table
-    print 'moments_XX\tremove_mean = ' + str(remove_mean)
-    print rows[0] + ('\t%i' * table.shape[1])%tuple(table[0])
-    print rows[1] + ('\t%i' * table.shape[1])%tuple(table[1])
-    print rows[2] + ('\t%i' * table.shape[1])%tuple(table[2])
-    print rows[3] + ('\t%.3f' * table.shape[1])%tuple(table[3])
-    print rows[4] + ('\t%.3f' * table.shape[1])%tuple(table[4])
-    print rows[5] + ('\t%.3f' * table.shape[1])%tuple(table[5])
-    print
+    print('moments_XX\tremove_mean = ' + str(remove_mean))
+    print(rows[0] + ('\t%i' * table.shape[1])%tuple(table[0]))
+    print(rows[1] + ('\t%i' * table.shape[1])%tuple(table[1]))
+    print(rows[2] + ('\t%i' * table.shape[1])%tuple(table[2]))
+    print(rows[3] + ('\t%.3f' * table.shape[1])%tuple(table[3]))
+    print(rows[4] + ('\t%.3f' * table.shape[1])%tuple(table[4]))
+    print(rows[5] + ('\t%.3f' * table.shape[1])%tuple(table[5]))
+    print()
 
 
 def main():
