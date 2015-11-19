@@ -45,7 +45,8 @@ if os.getenv('TRAVIS', False):
    coverage_report()
 
 if os.getenv('APPVEYOR', True):
-   call = ('powershell ' + os.path.join('devtools', 'ci', 'appveyor',
+   call = ('powershell ' + os.path.join(os.getenv('APPVEYOR_BUILD_FOLDER'), 
+           'devtools', 'ci', 'appveyor',
            'process_test_results.ps1')).split(' ')
    res |= subprocess.call(call)
    
