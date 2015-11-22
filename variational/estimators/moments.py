@@ -76,8 +76,6 @@ from variational.estimators.covar_c import covartools
 import warnings
 
 
-# TODO: this choice is still a bit pessimistic. In cases in which we have to copy the data anyway,
-#       we can probably use more sparsity.
 def _sparsify(X, sparse_mode='auto', sparse_tol=0.0):
     """ Determines the sparsity of X and returns a selected sub-matrix
 
@@ -116,6 +114,8 @@ def _sparsify(X, sparse_mode='auto', sparse_tol=0.0):
         # Note: this has been determined for a Intel i7 with MacOS, and may be different for different
         # CPUs / OSes. Moreover this heuristic is good for large number of samples, i.e. it may be
         # inadequate for small matrices X.
+        # TODO: this choice is still a bit pessimistic.
+        # TODO: In cases in which we have to copy the data anyway, we can probably use more sparsity.
         if X.shape[1] < 250:
             min_const_col_number = 0.25 * X.shape[1]
         elif X.shape[1] < 1000:
@@ -130,16 +130,16 @@ def _sparsify(X, sparse_mode='auto', sparse_tol=0.0):
             xconst = X[0, ~mask]
             X = X[:, mask]  # sparsify
         else:
-            xconst = 0
+            xconst = None
             mask = None
     else:
-        xconst = 0
+        xconst = None
         mask = None
 
     return X, mask, xconst  # None, 0 if not sparse
 
 
-def _copy_convert(X, copy=True):
+def _copy_convert(X, const=None, copy=True):
     """ Makes a copy or converts the data type if needed
 
     Copies the data and converts the data type if unsuitable for covariance
@@ -162,6 +162,8 @@ def _copy_convert(X, copy=True):
     ------
     X : ndarray
         copy or reference to X if no copy was needed.
+    const : ndarray or None
+        copy or reference to const if no copy was needed.
 
     """
     # determine type
@@ -171,68 +173,127 @@ def _copy_convert(X, copy=True):
     # copy/convert if needed
     if X.dtype not in (np.float64, dtype):  # leave as float64 (conversion is expensive), otherwise convert to dtype
         X = X.astype(dtype, order='C')
+        if const is not None:
+            const = const.astype(dtype, order='C')
     elif copy:
         X = X.copy(order='C')
+        if const is not None:
+            const = const.copy(order='C')
 
-    return X
+    return X, const
 
 
-def _sum_center(X, Y=None, symmetric=False, remove_mean=True, inplace=True):
-    """ Sums over rows and centers the data if requested.
+def _sum_sparse(xsum, mask_X, xconst, T):
+    s = np.zeros(len(mask_X))
+    s[mask_X] = xsum
+    s[~mask_X] = T * xconst
+    return s
+
+
+def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=False, remove_mean=False):
+    """ Computes the column sums and centered column sums.
+
+    If symmetric = False, the sums will be determined as
+    .. math:
+        sx &=& \frac{1}{2} \sum_t x_t
+        sy &=& \frac{1}{2} \sum_t y_t
+
+    If symmetric, the sums will be determined as
+
+    .. math:
+        sx = sy = \frac{1}{2T} \sum_t x_t + y_t
 
     Returns
     -------
-    X : ndarray
-        X data array, possibly centered
-    sx_raw : ndarray
-        raw row sum of X
+    sx : ndarray
+        effective row sum of X (including symmetrization if requested)
+    sx_raw_centered : ndarray
+        centered raw row sum of X
+
+    optional returns (only if Y is given):
+
+    sy : ndarray
+        effective row sum of X (including symmetrization if requested)
+    sy_raw_centered : ndarray
+        centered raw row sum of Y
+
+    """
+    T = X.shape[0]
+    # compute raw sums on variable data
+    sx_raw = X.sum(axis=0)  # this is the mean before subtracting it.
+    sy_raw = 0
+    if Y is not None:
+        sy_raw = Y.sum(axis=0)
+
+    # expand raw sums to full data
+    if xmask is not None:
+        sx_raw = _sum_sparse(sx_raw, xmask, xconst, T)
+    if ymask is not None:
+        sy_raw = _sum_sparse(sy_raw, ymask, yconst, T)
+
+    # compute effective sums and centered sums
+    if Y is not None and symmetric:
+        sx = 0.5*(sx_raw + sy_raw)
+        sy = sx
+    else:
+        sx = sx_raw
+        sy = sy_raw
+
+    sx_raw_centered = sx_raw
+    sy_raw_centered = sy_raw
+
+    # center mean
+    if remove_mean:
+        if Y is not None and symmetric:
+            sx_raw_centered -= sx
+            sy_raw_centered -= sy
+        else:
+            sx_raw_centered = np.zeros(sx.size)
+            if Y is not None:
+                sy_raw_centered = np.zeros(sy.size)
+
+    # return
+    if Y is not None:
+        return sx, sx_raw_centered, sy, sy_raw_centered
+    else:
+        return sx, sx_raw_centered
+
+
+def _center(X, s, mask=None, const=None, inplace=True):
+    """ Centers the data.
+
+    Parameters
+    ----------
+    inplace : bool
+        center in place
+
+    Returns
+    -------
+    sx : ndarray
+        uncentered row sum of X
     sx_centered : ndarray
         row sum of X after centering
 
     optional returns (only if Y is given):
 
-    Y : ndarray
-        Y data array, possibly centered
     sy_raw : ndarray
-        raw row sum of Y
+        uncentered row sum of Y
     sy_centered : ndarray
         row sum of Y after centering
 
     """
     T = X.shape[0]
-    # compute raw sums
-    sx_raw = X.sum(axis=0)  # this is the mean before subtracting it.
-    sy_raw = 0
-    if Y is not None:
-        sy_raw = Y.sum(axis=0)
-    sx_centered = sx_raw
-    sy_centered = sx_raw
-
-    # remove mean if desired
-    if remove_mean:
-        # determine sum for shifting
-        sx = sx_raw
-        sy = sy_raw
-        if symmetric:
-            sx = 0.5*(sx_raw + sy_raw)
-            sy = sx
-
-        # fast in-place subtraction, because at this point we have a copy if we want or need one
-        X = covartools.subtract_row(X, sx/float(T), inplace=inplace)
-        if Y is not None:
-            Y = covartools.subtract_row(Y, sy/float(T), inplace=inplace)
-        # shift sum after
-        if Y is not None and symmetric:  # this is the only case where sx_after, sy_after can be nonzero
-            sx_centered = sx_raw - sx
-            sy_centered = sy_raw - sy
-        else:
-            sx_centered = 0
-            sy_centered = 0
-
-    if Y is None:
-        return X, sx_raw, sx_centered
+    xmean = s / float(T)
+    if mask is None:
+        X = covartools.subtract_row(X, xmean, inplace=inplace)
     else:
-        return X, sx_raw, sx_centered, Y, sy_raw, sy_centered
+        X = covartools.subtract_row(X, xmean[mask], inplace=inplace)
+        if inplace:
+            const = np.subtract(const, xmean[~mask], const)
+        else:
+            const = np.subtract(const, xmean[~mask])
+
+    return X, const
 
 
 def _covar_dense(X, Y, symmetrize=False):
@@ -265,6 +326,8 @@ def _covar_dense(X, Y, symmetrize=False):
 
 def _is_zero(x):
     """ Returns True if x is numerically 0 or an array with 0's. """
+    if x is None:
+        return True
     if isinstance(x, numbers.Number):
         return x == 0.0
     if isinstance(x, np.ndarray):
@@ -347,30 +410,54 @@ def _covar_sparse(Xvar, mask_X, Yvar, mask_Y,
     yconst_is_0 = _is_zero(yconst)
     # Block 12 and 21
     if not (xsum_is_0 or yconst_is_0) or not (ysum_is_0 or xconst_is_0):
-        C12 = np.outer(xsum, yconst)
-        C21 = np.outer(xconst, ysum)
         if symmetrize:
-            Coff = 0.5*(C12 + C21.T)
+            Coff = 0.5*(np.outer(xsum, yconst) + np.outer(ysum, xconst))
             C[np.ix_(mask_X, ~mask_Y)] = Coff
-            C[np.ix_(~mask_X, mask_Y)] = Coff
+            C[np.ix_(~mask_X, mask_Y)] = Coff.T
         else:
-            C[np.ix_(mask_X, ~mask_Y)] = C12
-            C[np.ix_(~mask_X, mask_Y)] = C21
+            C[np.ix_(mask_X, ~mask_Y)] = np.outer(xsum, yconst)
+            C[np.ix_(~mask_X, mask_Y)] = np.outer(xconst, ysum)
     # Block 22
     if not (xconst_is_0 or yconst_is_0):
-        C22 = np.outer(xconst, yconst)
-        if symmetrize:
-            C[np.ix_(~mask_X, ~mask_Y)] = 0.5*(C22 + C22.T)
-        else:
+        if symmetrize:  # 0.5 T (c d' + d c')
+            C22 = np.outer(0.5*Xvar.shape[0]*xconst, yconst) + np.outer(0.5*Xvar.shape[0]*yconst, xconst)
+            C[np.ix_(~mask_X, ~mask_Y)] = C22
+        else:  # T c d'
+            C22 = np.outer(Xvar.shape[0]*xconst, yconst)
             C[np.ix_(~mask_X, ~mask_Y)] = C22
     return C
 
 
-def _sum_sparse(xsum, mask_X, xconst):
-    s = np.zeros(len(mask_X))
-    s[mask_X] = xsum
-    s[~mask_X] = xconst
-    return s
+def M2_dense(X, Y):
+    """ 2nd moment matrix using dense matrix computations. """
+    pass
+
+def M2_const(X, Y):
+    """ 2nd moment matrix exploiting constant input columns """
+    pass
+
+def M2_sparse(X, Y):
+    """ 2nd moment matrix exploiting zero input columns """
+    pass
+
+# TODO: maybe combine subsequent two functions?
+def M2_sparse_self_sym(X, Y):
+    """ 2nd self-symmetric moment matrix exploiting zero input columns
+
+    Computes X'X + Y'Y
+
+    """
+    pass
+
+def M2_sparse_other_sym(X, Y):
+    """ 2nd self-symmetric moment matrix exploiting zero input columns
+
+    Computes X'Y + Y'X
+
+    """
+    pass
+
+#def M2()
 
 
 def moments_XX(X, remove_mean=False, modify_data=False, sparse_mode='auto', sparse_tol=0.0):
@@ -410,20 +497,26 @@ def moments_XX(X, remove_mean=False, modify_data=False, sparse_mode='auto', spar
         unnormalized covariance matrix
 
     """
-    # sparsify and copy/convert
+    # sparsify
     X0, mask_X, xconst = _sparsify(X, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
-    X0 = _copy_convert(X0, copy=sparse_mode or (remove_mean and not modify_data))
-    # fast in-place centering, because at this point we have a copy if we want or need one
-    X0, sx_raw, sx_centered = _sum_center(X0, symmetric=False, remove_mean=remove_mean, inplace=True)
+    # copy / convert
+    # TODO: do we need to copy xconst?
+    X0, xconst = _copy_convert(X0, const=xconst, copy=sparse_mode or (remove_mean and not modify_data))
+    # sum / center
+    # TODO: confusing. now sx and sx_centered are on full space
+    sx, sx_centered = _sum(X0, xmask=mask_X, xconst=xconst, symmetric=False, remove_mean=remove_mean)
+    if remove_mean:
+        _center(X0, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
     # compute covariance matrix
     if mask_X is None:  # dense
-        xsum = sx_raw
         C = np.dot(X0.T, X0)
     else:
-        xsum = _sum_sparse(sx_raw, mask_X, xconst)
-        C = _covar_sparse(X0, mask_X, X0, mask_X, xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst)
+        # TODO: using centered data only on X0 would be a bit nicer
+        C = _covar_sparse(X0, mask_X, X0, mask_X,
+                          xsum=sx_centered[mask_X], xconst=xconst,
+                          ysum=sx_centered[mask_X], yconst=xconst)
 
-    return xsum, C
+    return sx, C
 
 
 def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False,
@@ -433,16 +526,16 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False,
     If symmetrize is False, computes
 
     .. math:
-        s_x  &=& \sum_t x_t`
-        s_y  &=& \sum_t y_t`
+        s_x  &=& \sum_t x_t
+        s_y  &=& \sum_t y_t
         C_XX &=& X^\top X
         C_XY &=& X^\top Y
 
     If symmetrize is True, computes
 
     .. math:
-        s_x = s_y &=& \sum_t x_t`
-        C_XX      &=& X^\top X
+        s_x = s_y &=& \frac{1}{2} \sum_t(x_t + y_t)
+        C_XX      &=& \frac{1}{2} (X^\top X + Y^\top Y)
         C_XY      &=& \frac{1}{2} (X^\top Y + Y^\top X)
 
     while exploiting zero or constant columns in the data matrix.
@@ -487,207 +580,28 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False,
     Y0, mask_Y, yconst = _sparsify(Y, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
     # copy / convert
     copy = sparse_mode or (remove_mean and not modify_data)
-    X0 = _copy_convert(X0, copy=copy)
-    Y0 = _copy_convert(Y0, copy=copy)
-    # fast in-place centering, because at this point we have a copy if we want or need one
-    X0, sx_raw, sx_centered = _sum_center(X0, symmetric=False, remove_mean=remove_mean, inplace=True)
-    Y0, sy_raw, sy_centered = _sum_center(Y0, symmetric=False, remove_mean=remove_mean, inplace=True)
+    X0, xconst = _copy_convert(X0, const=xconst, copy=copy)
+    Y0, yconst = _copy_convert(Y0, const=yconst, copy=copy)
+    # sum / center
+    sx, sx_centered, sy, sy_centered = _sum(X0, xmask=mask_X, xconst=xconst, Y=Y0, ymask=mask_Y, yconst=yconst,
+                                            symmetric=symmetrize, remove_mean=remove_mean)
+    if remove_mean:
+        _center(X0, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
+        _center(Y0, sy, mask=mask_Y, const=yconst, inplace=True)  # fast in-place centering
+
     # compute covariance matrix
     if mask_X is None:  # dense
-        xsum = sx_raw
-        ysum = sy_raw
-        C0 = _covar_dense(X0, X0, symmetrize=False)
-        Ct = _covar_dense(X0, Y0, symmetrize=symmetrize)
+        Cxx = _covar_dense(X0, X0, symmetrize=False)
+        if symmetrize:
+            Cxx = 0.5 * (Cxx + _covar_dense(Y0, Y0, symmetrize=False))
+        Cxy = _covar_dense(X0, Y0, symmetrize=symmetrize)
     else:
-        xsum = _sum_sparse(sx_raw, mask_X, xconst)
-        ysum = _sum_sparse(sy_raw, mask_Y, yconst)
+        Cxx = _covar_sparse(X0, mask_X, X0, mask_X, xsum=sx_centered[mask_X], xconst=xconst,
+                           ysum=sx_centered[mask_X], yconst=xconst, symmetrize=False)
+        if symmetrize:
+            Cxx = 0.5 * (Cxx + _covar_sparse(Y0, mask_Y, Y0, mask_Y, xsum=sy_centered[mask_Y], xconst=yconst,
+                                           ysum=sy_centered[mask_Y], yconst=yconst, symmetrize=False))
+        Cxy = _covar_sparse(X0, mask_X, Y0, mask_Y, xsum=sx_centered[mask_X], xconst=xconst,
+                           ysum=sy_centered[mask_Y], yconst=yconst, symmetrize=symmetrize)
 
-        C0 = _covar_sparse(X0, mask_X, X0, mask_X,
-                           xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst, symmetrize=False)
-        Ct = _covar_sparse(X0, mask_X, Y0, mask_Y,
-                           xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst, symmetrize=symmetrize)
-
-    return xsum, ysum, C0, Ct
-
-
-class Moments(object):
-
-    def __init__(self, w, s, M):
-        """
-        Parameters
-        ----------
-        w : float
-            statistical weight.
-                w = \sum_t w_t
-            In most cases, :math:`w_t=1`, and then w is just the number of samples that went into s1, S2.
-        s : ndarray(n,)
-            sum over samples:
-            .. math:
-                s = \sum_t w_t x_t
-        M : ndarray(n, n)
-            .. math:
-                M = (X-s)^T (X-s)
-        """
-        self.w = float(w)
-        self.s = s
-        self.M = M
-
-    def copy(self):
-        return Moments(self.w, self.s.copy(), self.M.copy())
-
-    def combine(self, other):
-        """
-        References
-        ----------
-        [1] http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
-        """
-        w1 = self.w
-        w2 = other.w
-        w = w1 + w2
-        ds = (w2/w1) * self.s - other.s
-        # update
-        self.w = w1 + w2
-        self.s += other.s
-        self.M += other.M + (w1 / (w2 * w)) * np.outer(ds, ds)
-        return self
-
-    @property
-    def mean(self):
-        return self.s / self.w
-
-    @property
-    def covar(self):
-        """ Returns M / (w-1)
-
-        Careful: The normalization w-1 assumes that we have counts as weights.
-
-        """
-        return self.M / (self.w-1)
-
-
-class MomentsStorage(object):
-    """
-    """
-
-    def __init__(self, nsave, rtol=1.5):
-        """
-        Parameters
-        ----------
-        rtol : float
-            To decide when to merge two Moments. Ideally I'd like to merge two
-            Moments when they have equal weights (i.e. equally many data points
-            went into them). If we always add data chunks with equal weights,
-            this can be achieved by using a binary tree, i.e. let M1 be the
-            moment estimates from one chunk. Two of them are added to M2, Two
-            M2 are added to M4, and so on. This way you need to store log2
-            (n_chunks) number of Moment estimates.
-            In practice you might get data in chunks of unequal length or weight.
-            Therefore we need some heuristic when two Moment estimates should get
-            merged. This is the role of rtol.
-
-        """
-        self.nsave = nsave
-        self.storage = []
-        self.rtol = rtol
-
-    def _can_merge_tail(self):
-        """ Checks if the two last list elements can be merged
-        """
-        if len(self.storage) < 2:
-            return False
-        return self.storage[-2].w <= self.storage[-1].w * self.rtol
-
-    def store(self, moments):
-        """ Store object X with weight w
-        """
-        if len(self.storage) == self.nsave:  # merge if we must
-            # print 'must merge'
-            self.storage[-1].combine(moments)
-        else:  # append otherwise
-            # print 'append'
-            self.storage.append(moments)
-        # merge if possible
-        while self._can_merge_tail():
-            # print 'merge: ',self.storage
-            M = self.storage.pop()
-            # print 'pop last: ',self.storage
-            self.storage[-1].combine(M)
-            # print 'merged: ',self.storage
-
-    @property
-    def moments(self):
-        """
-        """
-        # collapse storage if necessary
-        while len(self.storage) > 1:
-            # print 'collapse'
-            M = self.storage.pop()
-            self.storage[-1].combine(M)
-        # print 'return first element'
-        return self.storage[0]
-
-
-class RunningCovar(object):
-    """
-    """
-
-    def __init__(self, compute_XX=True, compute_XY=False, compute_YY=False,
-                 remove_mean=False, symmetrize=False,
-                 nsave=5):
-        # check input
-        if not compute_XX and not compute_XY:
-            raise ValueError('One of compute_XX or compute_XY must be True.')
-        if symmetrize and not compute_XY:
-            warnings.warn('symmetrize=True has no effect with compute_XY=False.')
-        # storage
-        self.compute_XX = compute_XX
-        if compute_XX:
-            self.storage_XX = MomentsStorage(nsave)
-        self.compute_XY = compute_XY
-        if compute_XY:
-            self.storage_XY = MomentsStorage(nsave)
-        self.compute_YY = compute_YY
-        if compute_YY:
-            raise NotImplementedError('Currently not implemented')
-        # symmetry
-        self.remove_mean = remove_mean
-        self.symmetrize = symmetrize
-
-    def add(self, X, Y=None):
-        # check input
-        T = X.shape[0]
-        if Y is not None:
-            assert Y.shape[0] == T, 'X and Y must have equal length'
-        # estimate and add to storage
-        if self.compute_XX and not self.compute_XY:
-            s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean)
-            self.storage_XX.store(Moments(T, s_X, C_XX))
-        elif self.compute_XX and self.compute_XY:
-            assert Y is not None
-            s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize)
-            self.storage_XX.store(Moments(T, s_X, C_XX))
-            self.storage_XY.store(Moments(T, s_X, C_XY))
-
-    def sum_X(self):
-        return self.storage_XX.moments.s
-
-    def mean_X(self):
-        return self.storage_XX.moments.mean
-
-    def moments_XX(self):
-        return self.storage_XX.moments.M
-
-    def cov_XX(self):
-        return self.storage_XX.moments.covar
-
-    def moments_XY(self):
-        return self.storage_XY.moments.M
-
-    def cov_XY(self):
-        return self.storage_XY.moments.covar
-
-    def sum_Y(self):
-        raise NotImplementedError('Currently not implemented')
-
-    def moments_YY(self):
-        raise NotImplementedError('Currently not implemented')
+    return sx, sy, Cxx, Cxy
