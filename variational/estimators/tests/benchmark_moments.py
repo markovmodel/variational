@@ -129,21 +129,21 @@ def benchmark_moments(L=10000, N=10000, nrep=5, xy=False, remove_mean=False, sym
 
 
 def main():
-    L = 10000
-    N = 1000
+    LNs = [(100000, 100), (10000, 1000), (1000, 2000), (250, 5000), (100, 10000)]
     nrep = 5
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=False, symmetrize=False, const=False)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=False, symmetrize=False, const=True)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=True, symmetrize=False, const=False)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=True, symmetrize=False, const=True)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=False, const=False)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=False, const=True)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=True, const=False)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=True, const=True)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=False, const=False)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=False, const=True)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=True, const=False)
-    benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=True, const=True)
+    for L, N in LNs:
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=False, symmetrize=False, const=False)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=False, symmetrize=False, const=True)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=True, symmetrize=False, const=False)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=True, symmetrize=False, const=True)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=False, const=False)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=False, const=True)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=True, const=False)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=False, symmetrize=True, const=True)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=False, const=False)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=False, const=True)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=True, const=False)
+        benchmark_moments(L=L, N=N, nrep=nrep, xy=True, remove_mean=True, symmetrize=True, const=True)
 
 
 if __name__ == "__main__":
