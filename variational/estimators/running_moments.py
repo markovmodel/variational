@@ -2,12 +2,12 @@ __author__ = 'noe'
 
 import warnings
 import numpy as np
-from moments import moments_XX, moments_XXXY
+from moments import moments_XX, moments_XXXY, moments_block
 
 
 class Moments(object):
 
-    def __init__(self, w, s, M):
+    def __init__(self, w, sx, sy, Mxy):
         """
         Parameters
         ----------
@@ -24,11 +24,12 @@ class Moments(object):
                 M = (X-s)^T (X-s)
         """
         self.w = float(w)
-        self.s = s
-        self.M = M
+        self.sx = sx
+        self.sy = sy
+        self.Mxy = Mxy
 
     def copy(self):
-        return Moments(self.w, self.s.copy(), self.M.copy())
+        return Moments(self.w, self.sx.copy(), self.sy.copy(), self.Mxy.copy())
 
     def combine(self, other, mean_free=False):
         """
@@ -39,20 +40,26 @@ class Moments(object):
         w1 = self.w
         w2 = other.w
         w = w1 + w2
-        ds = (w2/w1) * self.s - other.s
+        dsx = (w2/w1) * self.sx - other.sx
+        dsy = (w2/w1) * self.sy - other.sy
         # update
         self.w = w1 + w2
-        self.s += other.s
+        self.sx = self.sx + other.sx
+        self.sy = self.sy + other.sy
         #
         if mean_free:
-            self.M += other.M + (w1 / (w2 * w)) * np.outer(ds, ds)
+            self.Mxy += other.Mxy + (w1 / (w2 * w)) * np.outer(dsx, dsy)
         else:
-            self.M += other.M
+            self.Mxy += other.Mxy
         return self
 
     @property
-    def mean(self):
-        return self.s / self.w
+    def mean_x(self):
+        return self.sx / self.w
+
+    @property
+    def mean_y(self):
+        return self.sy / self.w
 
     @property
     def covar(self):
@@ -61,7 +68,7 @@ class Moments(object):
         Careful: The normalization w-1 assumes that we have counts as weights.
 
         """
-        return self.M / (self.w-1)
+        return self.Mxy/ (self.w-1)
 
 
 class MomentsStorage(object):
@@ -128,15 +135,45 @@ class MomentsStorage(object):
 
 
 class RunningCovar(object):
-    """
+    """ Running covariance estimator
+
+    Estimator object that can be fed chunks of X and Y data, and
+    that can generate on-the-fly estimates of mean, covariance, running sum
+    and second moment matrix.
+
+    Parameters
+    ----------
+    compute_XX : bool
+        Estimate the covariance of X
+    compute_XY : bool
+        Estimate the cross-covariance of X and Y
+    compute_YY : bool
+        Estimate the covariance of Y
+    remove_mean : bool
+        Remove the data mean in the covariance estimation
+    symmetrize : bool
+        Use symmetric estimates with sum defined by sum_t x_t + y_t and
+        second moment matrices defined by X'X + Y'Y and Y'X + X'Y.
+    nsave : int
+        Depth of Moment storage. Moments computed from each chunk will be
+        combined with Moments of similar statistical weight using the pairwise
+        combination algorithm described in [1]_.
+
+    References
+    ----------
+    .. [1] http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
+
     """
 
+    # to get the Y mean, but this is currently not stored.
     def __init__(self, compute_XX=True, compute_XY=False, compute_YY=False,
                  remove_mean=False, symmetrize=False,
                  nsave=5):
         # check input
         if not compute_XX and not compute_XY:
             raise ValueError('One of compute_XX or compute_XY must be True.')
+        if symmetrize and compute_YY:
+            raise ValueError('Combining compute_YY and symmetrize=True is meaningless.')
         if symmetrize and not compute_XY:
             warnings.warn('symmetrize=True has no effect with compute_XY=False.')
         # storage
@@ -148,7 +185,7 @@ class RunningCovar(object):
             self.storage_XY = MomentsStorage(nsave, remove_mean=remove_mean)
         self.compute_YY = compute_YY
         if compute_YY:
-            raise NotImplementedError('Currently not implemented')
+            self.storage_YY = MomentsStorage(nsave, remove_mean=remove_mean)
         # symmetry
         self.remove_mean = remove_mean
         self.symmetrize = symmetrize
@@ -160,35 +197,112 @@ class RunningCovar(object):
             assert Y.shape[0] == T, 'X and Y must have equal length'
         # estimate and add to storage
         if self.compute_XX and not self.compute_XY:
-            s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean)
-            self.storage_XX.store(Moments(T, s_X, C_XX))
+            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean)
+            self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
         elif self.compute_XX and self.compute_XY:
             assert Y is not None
-            s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize)
+            w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize)
             # make copy in order to get independently mergeable moments
-            self.storage_XX.store(Moments(T, s_X.copy(), C_XX))
-            self.storage_XY.store(Moments(T, s_X.copy(), C_XY))
+            self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
+            self.storage_XY.store(Moments(w, s_X, s_Y, C_XY))
+        else:  # compute block
+            assert Y is not None
+            assert not self.symmetrize
+            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean)
+            # make copy in order to get independently mergeable moments
+            self.storage_XX.store(Moments(w, s[0], s[0], C[0, 0]))
+            self.storage_XY.store(Moments(w, s[0], s[1], C[0, 1]))
+            self.storage_YY.store(Moments(w, s[1], s[1], C[1, 1]))
 
     def sum_X(self):
-        return self.storage_XX.moments.s
+        if self.compute_XX:
+            return self.storage_XX.moments.sx
+        elif self.compute_XY:
+            return self.storage_XY.moments.sx
+        else:
+            raise RuntimeError('sum_X is not available')
+
+    def sum_Y(self):
+        if self.compute_XY:
+            return self.storage_XY.moments.sy
+        elif self.compute_YY:
+            return self.storage_YY.moments.sy
+        else:
+            raise RuntimeError('sum_Y is not available')
 
     def mean_X(self):
-        return self.storage_XX.moments.mean
+        if self.compute_XX:
+            return self.storage_XX.moments.mean_x
+        elif self.compute_XY:
+            return self.storage_XY.moments.mean_y
+        else:
+            raise RuntimeError('mean_X is not available')
+
+    def mean_Y(self):
+        if self.compute_XY:
+            return self.storage_XY.moments.mean_y
+        elif self.compute_YY:
+            return self.storage_YY.moments.mean_y
+        else:
+            raise RuntimeError('mean_Y is not available')
+
+    def weight_XX(self):
+        return self.storage_XX.moments.w
+
+    def weight_XY(self):
+        return self.storage_XY.moments.w
+
+    def weight_YY(self):
+        return self.storage_YY.moments.w
 
     def moments_XX(self):
-        return self.storage_XX.moments.M
+        return self.storage_XX.moments.Mxy
+
+    def moments_XY(self):
+        return self.storage_XY.moments.Mxy
+
+    def moments_YY(self):
+        return self.storage_YY.moments.Mxy
 
     def cov_XX(self):
         return self.storage_XX.moments.covar
 
-    def moments_XY(self):
-        return self.storage_XY.moments.M
-
     def cov_XY(self):
         return self.storage_XY.moments.covar
 
-    def sum_Y(self):
-        raise NotImplementedError('Currently not implemented')
+    def cov_YY(self):
+        return self.storage_YY.moments.covar
 
-    def moments_YY(self):
-        raise NotImplementedError('Currently not implemented')
+
+def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=False, nsave=5):
+    """ Returns a running covariance estimator
+
+    Returns an estimator object that can be fed chunks of X and Y data, and
+    that can generate on-the-fly estimates of mean, covariance, running sum
+    and second moment matrix.
+
+    Parameters
+    ----------
+    xx : bool
+        Estimate the covariance of X
+    xy : bool
+        Estimate the cross-covariance of X and Y
+    yy : bool
+        Estimate the covariance of Y
+    remove_mean : bool
+        Remove the data mean in the covariance estimation
+    symmetrize : bool
+        Use symmetric estimates with sum defined by sum_t x_t + y_t and
+        second moment matrices defined by X'X + Y'Y and Y'X + X'Y.
+    nsave : int
+        Depth of Moment storage. Moments computed from each chunk will be
+        combined with Moments of similar statistical weight using the pairwise
+        combination algorithm described in [1]_.
+
+    References
+    ----------
+    .. [1] http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
+
+    """
+    return RunningCovar(compute_XX=xx, compute_XY=xy, compute_YY=yy,
+                        remove_mean=remove_mean, symmetrize=symmetrize, nsave=nsave)

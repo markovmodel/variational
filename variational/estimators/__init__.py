@@ -1,4 +1,5 @@
 __author__ = 'noe'
 
-from moments import moments_XX, moments_XXXY
-from running_moments import RunningCovar
+from moments import moments_XX, moments_XXXY, moments_block
+from moments import covar, covars
+from running_moments import RunningCovar, running_covar

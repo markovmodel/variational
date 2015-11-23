@@ -28,14 +28,14 @@ class TestMomentCombination(unittest.TestCase):
         s2 = self.X[div:].sum(axis=0)
         C2 = np.dot(self.X[div:].T, self.X[div:])
 
-        # many passes
-        m1 = running_moments.Moments(w1, s1, C1)
-        m2 = running_moments.Moments(w2, s2, C2)
+        # two passes
+        m1 = running_moments.Moments(w1, s1, s1, C1)
+        m2 = running_moments.Moments(w2, s2, s2, C2)
         m = m1.combine(m2, mean_free=False)
 
         assert np.allclose(m.w, self.w)
-        assert np.allclose(m.s, self.xsum)
-        assert np.allclose(m.M, self.M)
+        assert np.allclose(m.sx, self.xsum)
+        assert np.allclose(m.Mxy, self.M)
 
     def test_combine_meanfree(self):
         div = 1000
@@ -51,45 +51,48 @@ class TestMomentCombination(unittest.TestCase):
         C2 = np.dot((X2-X2.mean(axis=0)).T, X2-X2.mean(axis=0))
 
         # many passes
-        m1 = running_moments.Moments(w1, s1, C1)
-        m2 = running_moments.Moments(w2, s2, C2)
+        m1 = running_moments.Moments(w1, s1, s1, C1)
+        m2 = running_moments.Moments(w2, s2, s2, C2)
         m = m1.combine(m2, mean_free=True)
 
         assert np.allclose(m.w, self.w)
-        assert np.allclose(m.s, self.xsum)
-        assert np.allclose(m.M, self.M0)
+        assert np.allclose(m.sx, self.xsum)
+        assert np.allclose(m.Mxy, self.M0)
 
 
 class TestRunningMoments(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.X = np.random.rand(10000, 100)
-        cls.Y = np.random.rand(10000, 100)
+        cls.X = np.random.rand(10000, 2)
+        cls.Y = np.random.rand(10000, 2)
         # bias the first part
         cls.X[:2000] += 1.0
         cls.Y[:2000] -= 1.0
         # direct calculation, moments of X and Y
         cls.w = np.shape(cls.X)[0]
+        cls.wsym = 2*np.shape(cls.X)[0]
         cls.sx = cls.X.sum(axis=0)
         cls.sy = cls.Y.sum(axis=0)
-        cls.Mx = np.dot(cls.X.T, cls.X)
-        cls.My = np.dot(cls.Y.T, cls.Y)
+        cls.Mxx = np.dot(cls.X.T, cls.X)
+        cls.Mxy = np.dot(cls.X.T, cls.Y)
+        cls.Myy = np.dot(cls.Y.T, cls.Y)
         cls.mx = cls.sx / float(cls.w)
         cls.my = cls.sy / float(cls.w)
         cls.X0 = cls.X - cls.mx
         cls.Y0 = cls.Y - cls.my
-        cls.Mx0 = np.dot(cls.X0.T, cls.X0)
-        cls.My0 = np.dot(cls.Y0.T, cls.Y0)
+        cls.Mxx0 = np.dot(cls.X0.T, cls.X0)
+        cls.Mxy0 = np.dot(cls.X0.T, cls.Y0)
+        cls.Myy0 = np.dot(cls.Y0.T, cls.Y0)
         # direct calculation, symmetric moments
-        cls.s_sym = 0.5 * (cls.sx + cls.sy)
-        cls.Mxx_sym = 0.5 * (np.dot(cls.X.T, cls.X) + np.dot(cls.Y.T, cls.Y))
-        cls.Mxy_sym = 0.5 * (np.dot(cls.X.T, cls.Y) + np.dot(cls.Y.T, cls.X))
-        cls.m_sym = cls.s_sym / float(cls.w)
+        cls.s_sym = cls.sx + cls.sy
+        cls.Mxx_sym = np.dot(cls.X.T, cls.X) + np.dot(cls.Y.T, cls.Y)
+        cls.Mxy_sym = np.dot(cls.X.T, cls.Y) + np.dot(cls.Y.T, cls.X)
+        cls.m_sym = cls.s_sym / float(cls.wsym)
         cls.X0_sym = cls.X - cls.m_sym
         cls.Y0_sym = cls.Y - cls.m_sym
-        cls.Mxx0_sym = 0.5 * (np.dot(cls.X0_sym.T, cls.X0_sym) + np.dot(cls.Y0_sym.T, cls.Y0_sym))
-        cls.Mxy0_sym = 0.5 * (np.dot(cls.X0_sym.T, cls.Y0_sym) + np.dot(cls.Y0_sym.T, cls.X0_sym))
+        cls.Mxx0_sym = np.dot(cls.X0_sym.T, cls.X0_sym) + np.dot(cls.Y0_sym.T, cls.Y0_sym)
+        cls.Mxy0_sym = np.dot(cls.X0_sym.T, cls.Y0_sym) + np.dot(cls.Y0_sym.T, cls.X0_sym)
 
         return cls
 
@@ -135,7 +138,7 @@ class TestRunningMoments(unittest.TestCase):
         for i in range(0, self.X.shape[0], L):
             cc.add(self.X[i:i+L])
         assert np.allclose(cc.sum_X(), self.sx)
-        assert np.allclose(cc.moments_XX(), self.Mx)
+        assert np.allclose(cc.moments_XX(), self.Mxx)
 
     def test_XX_meanfree(self):
         # many passes
@@ -144,7 +147,7 @@ class TestRunningMoments(unittest.TestCase):
         for i in range(0, self.X.shape[0], L):
             cc.add(self.X[i:i+L])
         assert np.allclose(cc.sum_X(), self.sx)
-        assert np.allclose(cc.moments_XX(), self.Mx0)
+        assert np.allclose(cc.moments_XX(), self.Mxx0)
 
     def test_XXXY_withmean(self):
         # many passes
@@ -153,11 +156,8 @@ class TestRunningMoments(unittest.TestCase):
         for i in range(0, self.X.shape[0], L):
             cc.add(self.X[i:i+L], self.Y[i:i+L])
         assert np.allclose(cc.sum_X(), self.sx)
-        assert np.allclose(cc.moments_XX(), self.Mx)
-        #assert np.allclose(cc.sum_Y(), self.sy)
-        #assert np.allclose(cc.moments_XY(), self.My)
-        #assert np.allclose(cc.sum_Y(), self.sx)
-        #assert np.allclose(cc.moments_YY(), self.My)
+        assert np.allclose(cc.moments_XX(), self.Mxx)
+        assert np.allclose(cc.moments_XY(), self.Mxy)
 
     def test_XXXY_meanfree(self):
         # many passes
@@ -166,7 +166,28 @@ class TestRunningMoments(unittest.TestCase):
         for i in range(0, self.X.shape[0], L):
             cc.add(self.X[i:i+L], self.Y[i:i+L])
         assert np.allclose(cc.sum_X(), self.sx)
-        assert np.allclose(cc.moments_XX(), self.Mx0)
+        assert np.allclose(cc.moments_XX(), self.Mxx0)
+        assert np.allclose(cc.moments_XY(), self.Mxy0)
+
+    def test_XXXY_sym_withmean(self):
+        # many passes
+        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=True)
+        L = 1000
+        for i in range(0, self.X.shape[0], L):
+            cc.add(self.X[i:i+L], self.Y[i:i+L])
+        assert np.allclose(cc.sum_X(), self.s_sym)
+        assert np.allclose(cc.moments_XX(), self.Mxx_sym)
+        assert np.allclose(cc.moments_XY(), self.Mxy_sym)
+
+    def test_XXXY_sym_meanfree(self):
+        # many passes
+        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=True)
+        L = 1000
+        for i in range(0, self.X.shape[0], L):
+            cc.add(self.X[i:i+L], self.Y[i:i+L])
+        assert np.allclose(cc.sum_X(), self.s_sym)
+        assert np.allclose(cc.moments_XX(), self.Mxx0_sym)
+        assert np.allclose(cc.moments_XY(), self.Mxy0_sym)
 
 
 if __name__ == "__main__":
