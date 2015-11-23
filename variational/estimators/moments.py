@@ -439,7 +439,7 @@ def _M2(Xvar, Yvar, mask_X=None, mask_Y=None, xsum=0, xconst=0, ysum=0, yconst=0
     """ direct (nonsymmetric) second moment matrix. Decide if we need dense, sparse, const"""
     if mask_X is None and mask_Y is None:
         return _M2_dense(Xvar, Yvar)
-    elif _is_zero(xsum) and _is_zero(xsum) or _is_zero(xconst) and _is_zero(yconst):
+    elif _is_zero(xsum) and _is_zero(ysum) or _is_zero(xconst) and _is_zero(yconst):
         return _M2_sparse(Xvar, mask_X, Yvar, mask_Y)
     else:
         return _M2_const(Xvar, mask_X, xsum[mask_X], xconst, Yvar, mask_Y, ysum[mask_Y], yconst)
@@ -451,7 +451,7 @@ def _M2_symmetric(Xvar, Yvar, mask_X=None, mask_Y=None, xsum=0, xconst=0, ysum=0
         Cxxyy = _M2_dense(Xvar, Xvar) + _M2_dense(Yvar, Yvar)
         Cxy = _M2_dense(Xvar, Yvar)
         Cxyyx = Cxy + Cxy.T
-    elif _is_zero(xsum) and _is_zero(xsum) or _is_zero(xconst) and _is_zero(yconst):
+    elif _is_zero(xsum) and _is_zero(ysum) or _is_zero(xconst) and _is_zero(yconst):
         Cxxyy, Cxyyx = _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y)
     else:
         xvarsum = xsum[mask_X]  # to variable part
