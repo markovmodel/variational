@@ -1,2 +1,5 @@
+# versioneer files
 include versioneer.py
 include variational/_version.py
+
+recursive-include variational *.pyx *.c *.h
