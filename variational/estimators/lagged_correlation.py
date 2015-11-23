@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+from __future__ import print_function
 __author__ = 'noe'
 
 import numpy as np
 
-class LaggedCorrelation:
+class LaggedCorrelation(object):
 
     def __init__(self, output_dimension, tau=1):
         """ Computes correlation matrices C0 and Ctau from a bunch of trajectories
@@ -39,9 +41,9 @@ class LaggedCorrelation:
                             "Got %d, expected %d."%(X.shape[1],
                                                     self.output_dimension))
         # Print message if number of time steps is too small:
-        if X.shape <= self.tau:
-            print "Number of time steps is too small."
-            pass
+        if X.shape[0] <= self.tau:
+            raise ValueError("Number of time steps is too small.")
+
         # Get the time-lagged data:
         Y1 = X[self.tau:,:]
         # Remove the last tau frames from X:

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import numpy as np
 import os
 import unittest
@@ -39,7 +40,8 @@ class TestEstimator(unittest.TestCase):
         self.assertTrue(np.allclose(self.estimator.GetC0(), self.C0))
         
     def test_WrongDimension(self):
-        self.assertRaises(Exception, self.estimator.add(self.traj0[:,:-1]))
+        with self.assertRaises(Exception):
+            self.estimator.add(self.traj0[:,:-1])
 
 
 if __name__ == '__main__':

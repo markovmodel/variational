@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 __author__ = 'noe'
 
 import time
@@ -116,14 +118,14 @@ def benchmark_moments(L=10000, N=10000, nrep=5, xy=False, remove_mean=False, sym
         fname = 'moments_XXXY'
     else:
         fname = 'moments_XX'
-    print fname + '\tremove_mean = ' + str(remove_mean) + '\tsym = ' + str(symmetrize) + '\tconst = ' + str(const)
-    print rows[0] + ('\t%i' * table.shape[1])%tuple(table[0])
-    print rows[1] + ('\t%i' * table.shape[1])%tuple(table[1])
-    print rows[2] + ('\t%i' * table.shape[1])%tuple(table[2])
-    print rows[3] + ('\t%.3f' * table.shape[1])%tuple(table[3])
-    print rows[4] + ('\t%.3f' * table.shape[1])%tuple(table[4])
-    print rows[5] + ('\t%.3f' * table.shape[1])%tuple(table[5])
-    print
+    print(fname + '\tremove_mean = ' + str(remove_mean) + '\tsym = ' + str(symmetrize) + '\tconst = ' + str(const))
+    print(rows[0] + ('\t%i' * table.shape[1])%tuple(table[0]))
+    print(rows[1] + ('\t%i' * table.shape[1])%tuple(table[1]))
+    print(rows[2] + ('\t%i' * table.shape[1])%tuple(table[2]))
+    print(rows[3] + ('\t%.3f' * table.shape[1])%tuple(table[3]))
+    print(rows[4] + ('\t%.3f' * table.shape[1])%tuple(table[4]))
+    print(rows[5] + ('\t%.3f' * table.shape[1])%tuple(table[5]))
+    print()
 
 
 def main():
