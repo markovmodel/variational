@@ -12,11 +12,23 @@ def genS(N):
     return [s for s in S if s <= N]
 
 
-def gendata(L, N, n_var=None, const=False):
+def genX(L, N, n_var=None, const=False):
     X = np.random.rand(L, N)  # random data
     if n_var is not None:
         if const:
             Xsparse = np.ones((L, N))
+        else:
+            Xsparse = np.zeros((L, N))
+        Xsparse[:, :n_var] = X[:, :n_var]
+        X = Xsparse
+    return X
+
+
+def genY(L, N, n_var=None, const=False):
+    X = np.random.rand(L, N)  # random data
+    if n_var is not None:
+        if const:
+            Xsparse = -np.ones((L, N))
         else:
             Xsparse = np.zeros((L, N))
         Xsparse[:, :n_var] = X[:, :n_var]
@@ -86,9 +98,9 @@ def benchmark_moments(L=10000, N=10000, nrep=5, xy=False, remove_mean=False, sym
     S = genS(N)
 
     # time for reference calculation
-    X = gendata(L, N)
+    X = genX(L, N)
     if xy:
-        Y = gendata(L, N)
+        Y = genY(L, N)
         reftime = reftime_momentsXXXY(X, Y, remove_mean=remove_mean, symmetrize=symmetrize, nrep=nrep)
     else:
         reftime = reftime_momentsXX(X, remove_mean=remove_mean, nrep=nrep)
@@ -96,9 +108,9 @@ def benchmark_moments(L=10000, N=10000, nrep=5, xy=False, remove_mean=False, sym
     # my time
     times = np.zeros(len(S))
     for k, s in enumerate(S):
-        X = gendata(L, N, n_var=s, const=const)
+        X = genX(L, N, n_var=s, const=const)
         if xy:
-            Y = gendata(L, N, n_var=s, const=const)
+            Y = genY(L, N, n_var=s, const=const)
             times[k] = mytime_momentsXXXY(X, Y, remove_mean=remove_mean, symmetrize=symmetrize, nrep=nrep)
         else:
             times[k] = mytime_momentsXX(X, remove_mean=remove_mean, nrep=nrep)
@@ -129,9 +141,8 @@ def benchmark_moments(L=10000, N=10000, nrep=5, xy=False, remove_mean=False, sym
 
 
 def main():
-    LNs = [(100000, 100), (10000, 1000), (1000, 2000), (250, 5000), (100, 10000)]
-    nrep = 5
-    for L, N in LNs:
+    LNs = [(100000, 100, 10), (10000, 1000, 7), (1000, 2000, 5), (250, 5000, 5), (100, 10000, 5)]
+    for L, N, nrep in LNs:
         benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=False, symmetrize=False, const=False)
         benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=False, symmetrize=False, const=True)
         benchmark_moments(L=L, N=N, nrep=nrep, xy=False, remove_mean=True, symmetrize=False, const=False)

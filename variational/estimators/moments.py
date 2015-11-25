@@ -80,7 +80,18 @@ import numpy as np
 from variational.estimators.covar_c import covartools
 
 
-def _sparsify(X, sparse_mode='auto', sparse_tol=0.0):
+def _is_zero(x):
+    """ Returns True if x is numerically 0 or an array with 0's. """
+    if x is None:
+        return True
+    if isinstance(x, numbers.Number):
+        return x == 0.0
+    if isinstance(x, np.ndarray):
+        return np.all(x == 0)
+    return False
+
+
+def _sparsify(X, remove_mean=False, modify_data=False, sparse_mode='auto', sparse_tol=0.0):
     """ Determines the sparsity of X and returns a selected sub-matrix
 
     Only conducts sparsification if the number of constant columns is at least
@@ -90,6 +101,12 @@ def _sparsify(X, sparse_mode='auto', sparse_tol=0.0):
     ----------
     X : ndarray
         data matrix
+    remove_mean : bool
+        True: remove column mean from the data, False: don't remove mean.
+    modify_data : bool
+        If remove_mean=True, the mean will be removed in the data matrix X,
+        without creating an independent copy. This option is faster but might
+        lead to surprises because your input array is changed.
     sparse_mode : str
         one of:
             * 'dense' : always use dense mode
@@ -114,18 +131,17 @@ def _sparsify(X, sparse_mode='auto', sparse_tol=0.0):
     elif sparse_mode.lower() == 'dense':
         min_const_col_number = X.shape[1] + 1  # never use sparsity
     else:
-        # This is a rough heuristic to choose a minimum column number for which sparsity may pay off.
-        # Note: this has been determined for a Intel i7 with MacOS, and may be different for different
-        # CPUs / OSes. Moreover this heuristic is good for large number of samples, i.e. it may be
-        # inadequate for small matrices X.
-        # TODO: this choice is still a bit pessimistic.
-        # TODO: In cases in which we have to copy the data anyway, we can probably use more sparsity.
-        if X.shape[1] < 250:
-            min_const_col_number = 0.25 * X.shape[1]
-        elif X.shape[1] < 1000:
-            min_const_col_number = 0.5 * X.shape[1] - 100
+        if remove_mean and not modify_data:  # in this case we have to copy the data anyway, and can be permissive
+            min_const_col_number = max(0.1 * X.shape[1], 50)
         else:
-            min_const_col_number = 0.5 * X.shape[1] - 400
+            # This is a rough heuristic to choose a minimum column number for which sparsity may pay off.
+            # This heuristic is good for large number of samples, i.e. it may be inadequate for small matrices X.
+            if X.shape[1] < 250:
+                min_const_col_number = X.shape[1] - 0.25 * X.shape[1]
+            elif X.shape[1] < 1000:
+                min_const_col_number = X.shape[1] - (0.5 * X.shape[1] - 100)
+            else:
+                min_const_col_number = X.shape[1] - (0.8 * X.shape[1] - 400)
 
     if X.shape[1] > min_const_col_number:
         mask = covartools.variable_cols(X, tol=sparse_tol, min_constant=min_const_col_number)  # bool vector
@@ -141,6 +157,23 @@ def _sparsify(X, sparse_mode='auto', sparse_tol=0.0):
         mask = None
 
     return X, mask, xconst  # None, 0 if not sparse
+
+
+def _sparsify_pair(X, Y, remove_mean=False, modify_data=False, symmetrize=False, sparse_mode='auto', sparse_tol=0.0):
+    """
+    """
+    T = X.shape[0]
+    N = math.sqrt(X.shape[1] * Y.shape[1])
+    # check each data set separately for sparsity.
+    X0, mask_X, xconst = _sparsify(X, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
+    Y0, mask_Y, yconst = _sparsify(Y, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
+    # if we have nonzero constant columns and the number of samples is too small, do not treat as
+    # sparse, because then the const-specialized dot product function doesn't pay off.
+    is_const = not (_is_zero(xconst) and _is_zero(yconst))
+    if is_const and (symmetrize or not remove_mean) and 10*T < N:
+        return X, None, None, Y, None, None
+    else:
+        return X0, mask_X, xconst, Y0, mask_Y, yconst
 
 
 def _copy_convert(X, const=None, remove_mean=False, copy=True):
@@ -307,17 +340,6 @@ def _center(X, w, s, mask=None, const=None, inplace=True):
     return X, const
 
 
-def _is_zero(x):
-    """ Returns True if x is numerically 0 or an array with 0's. """
-    if x is None:
-        return True
-    if isinstance(x, numbers.Number):
-        return x == 0.0
-    if isinstance(x, np.ndarray):
-        return np.all(x == 0)
-    return False
-
-
 # ====================================================================================
 # SECOND MOMENT MATRICES / COVARIANCES
 # ====================================================================================
@@ -398,13 +420,15 @@ def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst):
     xconst_is_0 = _is_zero(xconst)
     yconst_is_0 = _is_zero(yconst)
     # TODO: maybe we don't need the checking here, if we do the decision in the higher-level function M2
+    # TODO: if not zero, we could still exploit the zeros in const and compute (and write!) this outer product
+    # TODO: only to a sub-matrix
     # Block 12 and 21
     if not (xsum_is_0 or yconst_is_0) or not (ysum_is_0 or xconst_is_0):
-            C[np.ix_(mask_X, ~mask_Y)] = np.outer(xvarsum, yconst)
-            C[np.ix_(~mask_X, mask_Y)] = np.outer(xconst, yvarsum)
+        C[np.ix_(mask_X, ~mask_Y)] = np.outer(xvarsum, yconst)
+        C[np.ix_(~mask_X, mask_Y)] = np.outer(xconst, yvarsum)
     # Block 22
     if not (xconst_is_0 or yconst_is_0):
-            C[np.ix_(~mask_X, ~mask_Y)] = np.outer(Xvar.shape[0]*xconst, yconst)
+        C[np.ix_(~mask_X, ~mask_Y)] = np.outer(Xvar.shape[0]*xconst, yconst)
     return C
 
 
@@ -508,7 +532,8 @@ def moments_XX(X, remove_mean=False, modify_data=False, sparse_mode='auto', spar
 
     """
     # sparsify
-    X0, mask_X, xconst = _sparsify(X, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
+    X0, mask_X, xconst = _sparsify(X, remove_mean=remove_mean, modify_data=modify_data,
+                                   sparse_mode=sparse_mode, sparse_tol=sparse_tol)
     is_sparse = mask_X is not None
     # copy / convert
     # TODO: do we need to copy xconst?
@@ -518,6 +543,8 @@ def moments_XX(X, remove_mean=False, modify_data=False, sparse_mode='auto', spar
     w, sx, sx0_centered = _sum(X0, xmask=mask_X, xconst=xconst, symmetric=False, remove_mean=remove_mean)
     if remove_mean:
         _center(X0, w, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
+    # TODO: we could make a second const check here. If after summation not enough zeros have appeared in the
+    # TODO: consts, we switch back to dense treatment here.
     # compute covariance matrix
     C = _M2(X0, X0, mask_X=mask_X, mask_Y=mask_X, xsum=sx0_centered, xconst=xconst, ysum=sx0_centered, yconst=xconst)
     return w, sx, C
@@ -586,8 +613,8 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False,
 
     """
     # sparsify
-    X0, mask_X, xconst = _sparsify(X, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
-    Y0, mask_Y, yconst = _sparsify(Y, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
+    X0, mask_X, xconst, Y0, mask_Y, yconst = _sparsify_pair(X, Y, remove_mean=remove_mean, modify_data=modify_data,
+                                                            symmetrize=symmetrize, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
     is_sparse = mask_X is not None and mask_Y is not None
     # copy / convert
     copy = is_sparse or (remove_mean and not modify_data)
