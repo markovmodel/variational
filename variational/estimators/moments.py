@@ -413,7 +413,7 @@ def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst):
     # check input
     if mask_X is None:
         mask_X = np.ones(Xvar.shape[1], dtype=np.bool)
-    elif mask_Y is None:
+    if (mask_Y is None):
         mask_Y = np.ones(Yvar.shape[1], dtype=np.bool)
     C = np.zeros((len(mask_X), len(mask_Y)))
     # Block 11
@@ -438,6 +438,11 @@ def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst):
 
 def _M2_sparse(Xvar, mask_X, Yvar, mask_Y):
     """ 2nd moment matrix exploiting zero input columns """
+    # check input
+    if mask_X is None:
+        mask_X = np.ones(Xvar.shape[1], dtype=np.bool)
+    if (mask_Y is None):
+        mask_Y = np.ones(Yvar.shape[1], dtype=np.bool)
     C = np.zeros((len(mask_X), len(mask_Y)))
     C[np.ix_(mask_X, mask_Y)] = np.dot(Xvar.T, Yvar)
     return C
