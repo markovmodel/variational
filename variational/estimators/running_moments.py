@@ -1,6 +1,7 @@
 __author__ = 'noe'
 
 import warnings
+import numbers
 import numpy as np
 from variational.estimators.moments import moments_XX, moments_XXXY, moments_block
 
@@ -190,25 +191,59 @@ class RunningCovar(object):
         self.remove_mean = remove_mean
         self.symmetrize = symmetrize
 
-    def add(self, X, Y=None):
+    def add(self, X, Y=None, weights_x=None, weights_y=None):
+        """
+        Add trajectory to estimate.
+
+        Parameters
+        ----------
+        X : ndarray(T, N)
+            array of N time series.
+        Y : ndarray(T, N)
+            array of N time series, usually time shifted version of X.
+        weights_x : None or float or ndarray(T, ):
+            weights assigned to each trajectory point of x. If None, all data points have weight one. If float,
+            the same weight will be given to all data points. If ndarray, each data point is assigned a separate
+            weight.
+        weights_y : None or float or ndarray(T, ):
+            same as above.
+
+        """
+
         # check input
         T = X.shape[0]
         if Y is not None:
             assert Y.shape[0] == T, 'X and Y must have equal length'
+        if weights_x is not None:
+            # Convert to array of length T if weights_x is a single number:
+            if isinstance(weights_x, numbers.Real):
+                weights_x = weights_x * np.ones(T, dtype=float)
+                if Y is not None:
+                    weights_y = weights_x * np.ones(T, dtype=float)
+            # Check appropriate length if weights is an array:
+            elif isinstance(weights_x, np.ndarray):
+                assert weights_x.shape[0] == T, 'weights_x and X must have equal length'
+                assert type(weights_y) == np.ndarray, 'types of weights_x and weights_y must be identical.'
+                assert weights_y.shape[0] == T, 'weights_y and X must have equal length'
+            else:
+                raise TypeError('weights_x is of type %s, must be a number or ndarray'%(type(weights_x)))
+        else:
+            weights_y = None
         # estimate and add to storage
         if self.compute_XX and not self.compute_XY:
-            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean)
+            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean, weights=weights)
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
         elif self.compute_XX and self.compute_XY:
             assert Y is not None
-            w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize)
+            w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize,
+                                                   weights=weights)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
             self.storage_XY.store(Moments(w, s_X, s_Y, C_XY))
         else:  # compute block
             assert Y is not None
             assert not self.symmetrize
-            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean)
+            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean, weights=weights)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s[0], s[0], C[0, 0]))
             self.storage_XY.store(Moments(w, s[0], s[1], C[0, 1]))

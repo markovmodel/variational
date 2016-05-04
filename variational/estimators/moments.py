@@ -229,7 +229,8 @@ def _sum_sparse(xsum, mask_X, xconst, T):
     return s
 
 
-def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=False, remove_mean=False):
+def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=False, remove_mean=False,
+         weights=None):
     """ Computes the column sums and centered column sums.
 
     If symmetric = False, the sums will be determined as
@@ -260,6 +261,9 @@ def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=
 
     """
     T = X.shape[0]
+    # Check if weights are given:
+    if weights is not None:
+
     # compute raw sums on variable data
     sx_raw = X.sum(axis=0)  # this is the mean before subtracting it.
     sy_raw = 0
@@ -496,7 +500,7 @@ def _M2_symmetric(Xvar, Yvar, mask_X=None, mask_Y=None, xsum=0, xconst=0, ysum=0
 # =================================================
 
 
-def moments_XX(X, remove_mean=False, modify_data=False, sparse_mode='auto', sparse_tol=0.0):
+def moments_XX(X, remove_mean=False, modify_data=False, weights=None, sparse_mode='auto', sparse_tol=0.0):
     """ Computes the first two unnormalized moments of X
 
     Computes :math:`s = \sum_t x_t` and :math:`C = X^\top X` while exploiting
@@ -512,6 +516,9 @@ def moments_XX(X, remove_mean=False, modify_data=False, sparse_mode='auto', spar
         If remove_mean=True, the mean will be removed in the data matrix X,
         without creating an independent copy. This option is faster but might
         lead to surprises because your input array is changed.
+    weights: None or ndarray(T, )
+        weights assigned to each trajectory point. If None, all data points have weight one.
+        If ndarray, each data point is assigned a separate weight.
     sparse_mode : str
         one of:
             * 'dense' : always use dense mode
@@ -544,17 +551,19 @@ def moments_XX(X, remove_mean=False, modify_data=False, sparse_mode='auto', spar
     X0, xconst = _copy_convert(X0, const=xconst, remove_mean=remove_mean,
                                copy=is_sparse or (remove_mean and not modify_data))
     # sum / center
-    w, sx, sx0_centered = _sum(X0, xmask=mask_X, xconst=xconst, symmetric=False, remove_mean=remove_mean)
+    w, sx, sx0_centered = _sum(X0, xmask=mask_X, xconst=xconst, symmetric=False, remove_mean=remove_mean,
+                               weights=weights)
     if remove_mean:
         _center(X0, w, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
     # TODO: we could make a second const check here. If after summation not enough zeros have appeared in the
     # TODO: consts, we switch back to dense treatment here.
     # compute covariance matrix
-    C = _M2(X0, X0, mask_X=mask_X, mask_Y=mask_X, xsum=sx0_centered, xconst=xconst, ysum=sx0_centered, yconst=xconst)
+    C = _M2(X0, X0, mask_X=mask_X, mask_Y=mask_X, xsum=sx0_centered, xconst=xconst, ysum=sx0_centered, yconst=xconst,
+            weights=weights)
     return w, sx, C
 
 
-def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False,
+def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, weights=None,
                  sparse_mode='auto', sparse_tol=0.0):
     """ Computes the first two unnormalized moments of X and Y
 
@@ -589,6 +598,9 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False,
         lead to surprises because your input array is changed.
     symmetrize : bool
         Computes symmetrized means and moments (see above)
+    weights: None or ndarray(T, )
+        weights assigned to each trajectory point. If None, all data points have weight one.
+        If ndarray, each data point is assigned a separate weight.
     sparse_mode : str
         one of:
             * 'dense' : always use dense mode
@@ -626,24 +638,24 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False,
     Y0, yconst = _copy_convert(Y0, const=yconst, remove_mean=remove_mean, copy=copy)
     # sum / center
     w, sx, sx_centered, sy, sy_centered = _sum(X0, xmask=mask_X, xconst=xconst, Y=Y0, ymask=mask_Y, yconst=yconst,
-                                               symmetric=symmetrize, remove_mean=remove_mean)
+                                               symmetric=symmetrize, remove_mean=remove_mean, weights=weights)
     if remove_mean:
         _center(X0, w, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
         _center(Y0, w, sy, mask=mask_Y, const=yconst, inplace=True)  # fast in-place centering
 
     if symmetrize:
         Cxx, Cxy = _M2_symmetric(X0, Y0, mask_X=mask_X, mask_Y=mask_Y,
-                                 xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst)
+                                 xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst, weights=weights)
     else:
         Cxx = _M2(X0, X0, mask_X=mask_X, mask_Y=mask_X,
-                  xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst)
+                  xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst, weights=weights)
         Cxy = _M2(X0, Y0, mask_X=mask_X, mask_Y=mask_Y,
-                  xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst)
+                  xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst, weights=weights)
 
     return w, sx, sy, Cxx, Cxy
 
 
-def moments_block(X, Y, remove_mean=False, modify_data=False, sparse_mode='auto', sparse_tol=0.0):
+def moments_block(X, Y, remove_mean=False, modify_data=False, weights=None, sparse_mode='auto', sparse_tol=0.0):
     """ Computes the first two unnormalized moments of X and Y
 
     Computes
@@ -670,6 +682,9 @@ def moments_block(X, Y, remove_mean=False, modify_data=False, sparse_mode='auto'
         If remove_mean=True, the mean will be removed in the data matrix X,
         without creating an independent copy. This option is faster but might
         lead to surprises because your input array is changed.
+    weights: None or ndarray(T, )
+        weights assigned to each trajectory point. If None, all data points have weight one.
+        If ndarray, each data point is assigned a separate weight.
     sparse_mode : str
         one of:
             * 'dense' : always use dense mode
@@ -703,17 +718,17 @@ def moments_block(X, Y, remove_mean=False, modify_data=False, sparse_mode='auto'
     Y0, yconst = _copy_convert(Y0, const=yconst, copy=copy)
     # sum / center
     w, sx, sx_centered, sy, sy_centered = _sum(X0, xmask=mask_X, xconst=xconst, Y=Y0, ymask=mask_Y, yconst=yconst,
-                                               symmetric=False, remove_mean=remove_mean)
+                                               symmetric=False, remove_mean=remove_mean, weights=weights)
     if remove_mean:
         _center(X0, w, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
         _center(Y0, w, sy, mask=mask_Y, const=yconst, inplace=True)  # fast in-place centering
 
     Cxx = _M2(X0, X0, mask_X=mask_X, mask_Y=mask_X,
-              xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst)
+              xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst, weights=weights)
     Cxy = _M2(X0, Y0, mask_X=mask_X, mask_Y=mask_Y,
-              xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst)
+              xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst, weights=weights)
     Cyy = _M2(Y0, Y0, mask_X=mask_Y, mask_Y=mask_Y,
-              xsum=sy_centered, xconst=yconst, ysum=sy_centered, yconst=yconst)
+              xsum=sy_centered, xconst=yconst, ysum=sy_centered, yconst=yconst, weights=weights)
 
     return w, [sx, sy], [[Cxx, Cxy], [Cxy.T, Cyy]]
 
