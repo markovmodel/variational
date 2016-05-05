@@ -41,15 +41,19 @@ class TestMoments(unittest.TestCase):
         cls.Xb_10 = cls.Xb_10.astype(np.bool)
         cls.Xb_10_sparsezero = np.zeros((10000, 10), dtype=np.bool)
         cls.Xb_10_sparsezero[:, 0] = cls.Xb_10[:, 0]
+        # generate weights:
+        cls.weights = np.random.rand(10000)
 
         return cls
 
-    def _test_moments_X(self, X, remove_mean=False, sparse_mode='auto'):
+    def _test_moments_X(self, X, remove_mean=False, sparse_mode='auto', weights=None):
         # proposed solution
         w, s_X, C_XX = moments.moments_XX(X, remove_mean=remove_mean, modify_data=False,
-                                          sparse_mode=sparse_mode)
+                                          sparse_mode=sparse_mode, weights=weights)
         # reference
         X = X.astype(np.float64)
+        if weights is not None:
+            X = weights[:, None] * X
         s_X_ref = X.sum(axis=0)
         if remove_mean:
             X = X - X.mean(axis=0)
@@ -65,6 +69,12 @@ class TestMoments(unittest.TestCase):
         # mean-free, dense
         self._test_moments_X(self.X_10, remove_mean=True, sparse_mode='dense')
         self._test_moments_X(self.X_100, remove_mean=True, sparse_mode='dense')
+        # weighted test, simple, dense:
+        self._test_moments_X(self.X_10, remove_mean=False, sparse_mode='dense', weights=self.weights)
+        self._test_moments_X(self.X_100, remove_mean=False, sparse_mode='dense', weights=self.weights)
+        # weighted test, mean-free, dense:
+        self._test_moments_X(self.X_10, remove_mean=True, sparse_mode='dense', weights=self.weights)
+        self._test_moments_X(self.X_100, remove_mean=True, sparse_mode='dense', weights=self.weights)
 
     def test_moments_X_sparsezero(self):
         # simple test, sparse
@@ -73,6 +83,12 @@ class TestMoments(unittest.TestCase):
         # mean-free, sparse
         self._test_moments_X(self.X_10_sparsezero, remove_mean=True, sparse_mode='sparse')
         self._test_moments_X(self.X_100_sparsezero, remove_mean=True, sparse_mode='sparse')
+        # weighted, sparse
+        self._test_moments_X(self.X_10_sparsezero, remove_mean=False, sparse_mode='sparse', weights=self.weights)
+        self._test_moments_X(self.X_100_sparsezero, remove_mean=False, sparse_mode='sparse', weights=self.weights)
+        # weighted, mean-free, sparse
+        self._test_moments_X(self.X_10_sparsezero, remove_mean=True, sparse_mode='sparse', weights=self.weights)
+        self._test_moments_X(self.X_100_sparsezero, remove_mean=True, sparse_mode='sparse', weights=self.weights)
 
     def test_moments_X_sparseconst(self):
         # simple test, sparse
@@ -81,6 +97,12 @@ class TestMoments(unittest.TestCase):
         # mean-free, sparse
         self._test_moments_X(self.X_10_sparseconst, remove_mean=True, sparse_mode='sparse')
         self._test_moments_X(self.X_100_sparseconst, remove_mean=True, sparse_mode='sparse')
+        # weighted, sparse:
+        self._test_moments_X(self.X_10_sparseconst, remove_mean=False, sparse_mode='dense', weights=self.weights)
+        self._test_moments_X(self.X_100_sparseconst, remove_mean=False, sparse_mode='dense', weights=self.weights)
+        # weighted, mean-free, sparse:
+        self._test_moments_X(self.X_10_sparseconst, remove_mean=True, sparse_mode='dense', weights=self.weights)
+        self._test_moments_X(self.X_100_sparseconst, remove_mean=True, sparse_mode='dense', weights=self.weights)
 
     def test_boolean_moments(self):
         # standard tests
@@ -98,21 +120,32 @@ class TestMoments(unittest.TestCase):
         assert np.array_equal(Cxx, Cxx_ref)
 
 
-    def _test_moments_XY(self, X, Y, symmetrize=False, remove_mean=False, sparse_mode='auto'):
+    def _test_moments_XY(self, X, Y, symmetrize=False, remove_mean=False, sparse_mode='auto', weights_x=None,
+                         weights_y=None):
         w, s_X, s_Y, C_XX, C_XY = moments.moments_XXXY(X, Y, remove_mean=remove_mean, modify_data=False,
-                                                       symmetrize=symmetrize, sparse_mode=sparse_mode)
+                                                       symmetrize=symmetrize, sparse_mode=sparse_mode,
+                                                       weights_x=weights_x, weights_y=weights_y)
         # reference
+        T = X.shape[0]
+        if weights_x is not None:
+            X = weights_x[:, None] * X
+        else:
+            weights_x = np.ones(T)
+        if weights_y is not None:
+            Y = weights_y[:, None] * Y
+        else:
+            weights_y = np.ones(T)
         s_X_ref = X.sum(axis=0)
         s_Y_ref = Y.sum(axis=0)
         if symmetrize:
             s_X_ref = s_X_ref + s_Y_ref
             s_Y_ref = s_X_ref
-            w = 2 * X.shape[0]
+            w = np.sum(weights_x) + np.sum(weights_y)
         else:
-            w = X.shape[0]
+            w = np.sum(weights_x)
         if remove_mean:
             X = X - s_X_ref/float(w)
-            Y = Y - s_Y_ref/float(w)
+            Y = Y - s_X_ref/float(w)
         if symmetrize:
             C_XX_ref = np.dot(X.T, X) + np.dot(Y.T, Y)
             C_XY_ref = np.dot(X.T, Y) + np.dot(Y.T, X)
@@ -134,6 +167,20 @@ class TestMoments(unittest.TestCase):
         self._test_moments_XY(self.X_10, self.Y_10, symmetrize=False, remove_mean=True, sparse_mode='dense')
         self._test_moments_XY(self.X_100, self.Y_10, symmetrize=False, remove_mean=True, sparse_mode='dense')
         self._test_moments_XY(self.X_100, self.Y_100, symmetrize=False, remove_mean=True, sparse_mode='dense')
+        # weighted test, dense
+        self._test_moments_XY(self.X_10, self.Y_10, symmetrize=False, remove_mean=False, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100, self.Y_10, symmetrize=False, remove_mean=False, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100, self.Y_100, symmetrize=False, remove_mean=False, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
+        # weighted test, mean-free, dense
+        self._test_moments_XY(self.X_10, self.Y_10, symmetrize=False, remove_mean=True, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100, self.Y_10, symmetrize=False, remove_mean=True, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100, self.Y_100, symmetrize=False, remove_mean=True, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
 
     def test_moments_XY_sparsezero(self):
         # simple test, sparse
@@ -144,6 +191,20 @@ class TestMoments(unittest.TestCase):
         self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=False, remove_mean=True, sparse_mode='sparse')
         self._test_moments_XY(self.X_100_sparsezero, self.Y_10_sparsezero, symmetrize=False, remove_mean=True, sparse_mode='sparse')
         self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=False, remove_mean=True, sparse_mode='sparse')
+        # weighted test, sparse
+        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=False, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_10_sparsezero, symmetrize=False, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=False, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        # weighted test, mean-free, sparse
+        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=False, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_10_sparsezero, symmetrize=False, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=False, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
 
     def test_moments_XY_sparseconst(self):
         # simple test, sparse
@@ -154,6 +215,20 @@ class TestMoments(unittest.TestCase):
         self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=False, remove_mean=True, sparse_mode='sparse')
         self._test_moments_XY(self.X_100_sparseconst, self.Y_10_sparseconst, symmetrize=False, remove_mean=True, sparse_mode='sparse')
         self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=False, remove_mean=True, sparse_mode='sparse')
+        # weighted test, sparse
+        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=False, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_10_sparseconst, symmetrize=False, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=False, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        # weighted test, mean-free, sparse
+        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=False, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_10_sparseconst, symmetrize=False, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=False, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
 
     def test_moments_XY_sym(self):
         # simple test, dense
@@ -163,22 +238,57 @@ class TestMoments(unittest.TestCase):
         self._test_moments_XY(self.X_2, self.Y_2, symmetrize=True, remove_mean=True, sparse_mode='dense')
         self._test_moments_XY(self.X_10, self.Y_10, symmetrize=True, remove_mean=True, sparse_mode='dense')
         self._test_moments_XY(self.X_100, self.Y_100, symmetrize=True, remove_mean=True, sparse_mode='dense')
+        # weighted, mean-free, dense
+        self._test_moments_XY(self.X_2, self.Y_2, symmetrize=True, remove_mean=True, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_10, self.Y_10, symmetrize=True, remove_mean=True, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100, self.Y_100, symmetrize=True, remove_mean=True, sparse_mode='dense',
+                              weights_x=self.weights, weights_y=self.weights)
 
     def test_moments_XY_sym_sparsezero(self):
         # simple test, sparse
-        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=True, remove_mean=False, sparse_mode='sparse')
-        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=True, remove_mean=False, sparse_mode='sparse')
+        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
         # mean-free, sparse
-        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=True, remove_mean=True, sparse_mode='sparse')
-        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=True, remove_mean=True, sparse_mode='sparse')
+        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        # weighted test, sparse
+        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        # weighted, mean-free, sparse
+        self._test_moments_XY(self.X_10_sparsezero, self.Y_10_sparsezero, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparsezero, self.Y_100_sparsezero, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
 
     def test_moments_XY_sym_sparseconst(self):
         # simple test, sparse
-        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=True, remove_mean=False, sparse_mode='sparse')
-        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=True, remove_mean=False, sparse_mode='sparse')
+        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
         # mean-free, sparse
-        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=True, remove_mean=True, sparse_mode='sparse')
-        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=True, remove_mean=True, sparse_mode='sparse')
+        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        # weighted test, sparse
+        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=True, remove_mean=False, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        # weighted, mean-free, sparse
+        self._test_moments_XY(self.X_10_sparseconst, self.Y_10_sparseconst, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
+        self._test_moments_XY(self.X_100_sparseconst, self.Y_100_sparseconst, symmetrize=True, remove_mean=True, sparse_mode='sparse',
+                              weights_x=self.weights, weights_y=self.weights)
 
 
 if __name__ == "__main__":

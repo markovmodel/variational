@@ -231,19 +231,19 @@ class RunningCovar(object):
             weights_y = None
         # estimate and add to storage
         if self.compute_XX and not self.compute_XY:
-            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean, weights=weights)
+            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean, weights=weights_x)
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
         elif self.compute_XX and self.compute_XY:
             assert Y is not None
             w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize,
-                                                   weights=weights)
+                                                   weights_x=weights_x, weights_y=weights_y)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
             self.storage_XY.store(Moments(w, s_X, s_Y, C_XY))
         else:  # compute block
             assert Y is not None
             assert not self.symmetrize
-            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean, weights=weights)
+            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean, weights=weights_x)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s[0], s[0], C[0, 0]))
             self.storage_XY.store(Moments(w, s[0], s[1], C[0, 1]))
