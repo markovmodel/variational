@@ -174,7 +174,7 @@ metadata=dict(
         'six',
         ],
     setup_requires=[
-        'cython',
+        'cython>=0.24',
         'numpy',
         ],
     ext_modules=lazy_cythonize(extensions),
