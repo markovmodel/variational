@@ -155,6 +155,11 @@ class RunningCovar(object):
     symmetrize : bool
         Use symmetric estimates with sum defined by sum_t x_t + y_t and
         second moment matrices defined by X'X + Y'Y and Y'X + X'Y.
+    time_lagged : bool
+        Set to True if estimator is used for time-lagged correlations between the
+        same time-series.
+    lag : int (only if time_lagged == True)
+        lag time to be used for time-lagged correlations.
     nsave : int
         Depth of Moment storage. Moments computed from each chunk will be
         combined with Moments of similar statistical weight using the pairwise
@@ -168,15 +173,19 @@ class RunningCovar(object):
 
     # to get the Y mean, but this is currently not stored.
     def __init__(self, compute_XX=True, compute_XY=False, compute_YY=False,
-                 remove_mean=False, symmetrize=False,
+                 remove_mean=False, symmetrize=False, time_lagged=False, lag=1,
                  nsave=5):
         # check input
         if not compute_XX and not compute_XY:
             raise ValueError('One of compute_XX or compute_XY must be True.')
         if symmetrize and compute_YY:
             raise ValueError('Combining compute_YY and symmetrize=True is meaningless.')
+        if time_lagged and compute_YY:
+            raise ValueError('Combining time_lagged and symmetrize=True is meaningless.')
         if symmetrize and not compute_XY:
             warnings.warn('symmetrize=True has no effect with compute_XY=False.')
+        if time_lagged and not compute_XY:
+            warnings.warn('time_lagged=True has no effect with compute_XY=False.')
         # storage
         self.compute_XX = compute_XX
         if compute_XX:
@@ -190,8 +199,10 @@ class RunningCovar(object):
         # symmetry
         self.remove_mean = remove_mean
         self.symmetrize = symmetrize
+        self.time_lagged = time_lagged
+        self.lag = lag
 
-    def add(self, X, Y=None, weights_x=None, weights_y=None):
+    def add(self, X, Y=None, weights=None):
         """
         Add trajectory to estimate.
 
@@ -201,12 +212,10 @@ class RunningCovar(object):
             array of N time series.
         Y : ndarray(T, N)
             array of N time series, usually time shifted version of X.
-        weights_x : None or float or ndarray(T, ):
-            weights assigned to each trajectory point of x. If None, all data points have weight one. If float,
+        weights : None or float or ndarray(T, ):
+            weights assigned to each trajectory point. If None, all data points have weight one. If float,
             the same weight will be given to all data points. If ndarray, each data point is assigned a separate
             weight.
-        weights_y : None or float or ndarray(T, ):
-            same as above.
 
         """
 
@@ -214,36 +223,53 @@ class RunningCovar(object):
         T = X.shape[0]
         if Y is not None:
             assert Y.shape[0] == T, 'X and Y must have equal length'
-        if weights_x is not None:
-            # Convert to array of length T if weights_x is a single number:
-            if isinstance(weights_x, numbers.Real):
-                weights_x = weights_x * np.ones(T, dtype=float)
-                if Y is not None:
-                    weights_y = weights_x * np.ones(T, dtype=float)
+        # Weights cannot be used for compute_YY:
+        if weights is not None and self.compute_YY:
+            raise ValueError('Cannot use weights when compute_YY is True')
+        # Weights can only be used for time-lagged data:
+        if weights is not None and not self.compute_XY and self.time_lagged:
+            raise ValueError('Weights can only be used for time-lagged data if compute_XY is True')
+        # Check consistency for time-lagged case:
+        if self.time_lagged and Y is not None:
+            warnings.warn('Argument Y will be ignored because time-lagged is True')
+        if self.time_lagged and T < self.lag + 1:
+            raise ValueError('Input array X is too short for lag time %d'%(self.lag))
+        if weights is not None:
+            # Convert to array of length T if weights is a single number:
+            if isinstance(weights, numbers.Real):
+                weights = weights * np.ones(T, dtype=float)
             # Check appropriate length if weights is an array:
-            elif isinstance(weights_x, np.ndarray):
-                assert weights_x.shape[0] == T, 'weights_x and X must have equal length'
-                assert type(weights_y) == np.ndarray, 'types of weights_x and weights_y must be identical.'
-                assert weights_y.shape[0] == T, 'weights_y and X must have equal length'
+            elif isinstance(weights, np.ndarray):
+                assert weights.shape[0] == T, 'weights and X must have equal length'
             else:
-                raise TypeError('weights_x is of type %s, must be a number or ndarray'%(type(weights_x)))
-        else:
-            weights_y = None
+                raise TypeError('weights is of type %s, must be a number or ndarray'%(type(weights)))
         # estimate and add to storage
         if self.compute_XX and not self.compute_XY:
-            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean, weights=weights_x)
+            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean, weights=weights)
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
         elif self.compute_XX and self.compute_XY:
-            assert Y is not None
-            w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize,
-                                                   weights_x=weights_x, weights_y=weights_y)
+            if self.time_lagged:
+                Y = X[self.lag:, :]
+                X = X[:-self.lag, :]
+                if weights is not None:
+                    we_y = weights[self.lag:]
+                    we_x = weights[:-self.lag]
+                    w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean,
+                                                           symmetrize=self.symmetrize, weights_x=we_x, weights_y=we_y,
+                                                           time_lagged=True)
+                else:
+                    w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean,
+                                                           symmetrize=self.symmetrize, time_lagged=True)
+            else:
+                assert Y is not None
+                w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
             self.storage_XY.store(Moments(w, s_X, s_Y, C_XY))
         else:  # compute block
             assert Y is not None
             assert not self.symmetrize
-            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean, weights=weights_x)
+            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s[0], s[0], C[0, 0]))
             self.storage_XY.store(Moments(w, s[0], s[1], C[0, 1]))

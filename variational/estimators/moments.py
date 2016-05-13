@@ -75,7 +75,7 @@ from __future__ import absolute_import
 
 __author__ = 'noe'
 
-import math, sys, numbers
+import math, sys, numbers, warnings
 import numpy as np
 from variational.estimators.covar_c import covartools
 
@@ -230,7 +230,7 @@ def _sum_sparse(xsum, mask_X, xconst, T):
 
 
 def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=False, remove_mean=False,
-         weights_x=None, weights_y=None):
+         weights_x=None, weights_y=None, time_lagged=False):
     """ Computes the column sums and centered column sums.
 
     If symmetric = False, the sums will be determined as
@@ -264,12 +264,10 @@ def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=
     # Check if weights are given:
     if weights_x is not None:
         X = weights_x[:, None] * X
-    else:
-        weights_x = np.ones(T)
+        time_lagged = True
     if weights_y is not None:
         Y = weights_y[:, None] * Y
-    else:
-        weights_y = np.ones(T)
+        time_lagged = True
     # compute raw sums on variable data
     sx_raw = X.sum(axis=0)  # this is the mean before subtracting it.
     sy_raw = 0
@@ -278,28 +276,49 @@ def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=
 
     # expand raw sums to full data
     if xmask is not None:
-        sx_raw = _sum_sparse(sx_raw, xmask, xconst, T)
+        if weights_x is not None:
+            sx_raw = _sum_sparse(sx_raw, xmask, xconst, weights_x.sum())
+        else:
+            sx_raw = _sum_sparse(sx_raw, xmask, xconst, T)
     if ymask is not None:
-        sy_raw = _sum_sparse(sy_raw, ymask, yconst, T)
+        if weights_y is not None:
+            sy_raw = _sum_sparse(sy_raw, ymask, yconst, weights_y.sum())
+        else:
+            sy_raw = _sum_sparse(sy_raw, ymask, yconst, T)
 
     # compute effective sums and centered sums
     if Y is not None and symmetric:
         sx = sx_raw + sy_raw
         sy = sx
-        w = np.sum(weights_x) + np.sum(weights_y)
+        if weights_x is not None:
+            w = np.sum(weights_x) + np.sum(weights_y)
+        else:
+            w = 2 * T
     else:
         sx = sx_raw
         sy = sy_raw
-        w = np.sum(weights_x)
+        if weights_x is not None:
+            w = np.sum(weights_x)
+        else:
+            w = T
 
-    sx_raw_centered = sx_raw
-    sy_raw_centered = sy_raw
+    sx_raw_centered = sx_raw.copy()
+    if Y is not None:
+        sy_raw_centered = sy_raw.copy()
 
-    # center mean
+    # center mean.
     if remove_mean:
-        # In all cases, the sums of X and Y are changed by T times the weighted mean, which is (sx/w).
-        sx_raw_centered -= (T / w)*sx
-        sy_raw_centered -= (T / w)*sx
+        if time_lagged:
+            sx_raw_centered -= (T / w)*sx
+            if Y is not None:
+                sy_raw_centered -= (T / w)*sx
+        elif Y is not None and symmetric:
+            sx_raw_centered -= 0.5 * sx
+            sy_raw_centered -= 0.5 * sy
+        else:
+            sx_raw_centered = np.zeros(sx.size)
+            if Y is not None:
+                sy_raw_centered = np.zeros(sy.size)
 
     # return
     if Y is not None:
@@ -357,8 +376,9 @@ def _M2_dense(X, Y, weights=None):
 
     """
     if weights is not None:
-        X = weights[:, None] * X
-    return np.dot(X.T, Y)
+        return np.dot((weights[:, None] * X).T, Y)
+    else:
+        return np.dot(X.T, Y)
 
 
 def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst, weights=None):
@@ -435,15 +455,17 @@ def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst, weig
     # TODO: if not zero, we could still exploit the zeros in const and compute (and write!) this outer product
     # TODO: only to a sub-matrix
     # Block 12 and 21
+    if weights is not None:
+        wsum = np.sum(weights)
+        xvarsum = np.sum(weights[:, None] * Xvar, axis=0)
+        yvarsum = np.sum(weights[:, None] * Yvar, axis=0)
+    else:
+        wsum = Xvar.shape[0]
     if not (xsum_is_0 or yconst_is_0) or not (ysum_is_0 or xconst_is_0):
         C[np.ix_(mask_X, ~mask_Y)] = np.outer(xvarsum, yconst)
         C[np.ix_(~mask_X, mask_Y)] = np.outer(xconst, yvarsum)
     # Block 22
     if not (xconst_is_0 or yconst_is_0):
-        if weights is not None:
-            wsum = np.sum(weights)
-        else:
-            wsum = Xvar.shape[0]
         C[np.ix_(~mask_X, ~mask_Y)] = np.outer(wsum*xconst, yconst)
     return C
 
@@ -471,7 +493,7 @@ def _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y, weights_x=None, weights_y=None):
     Cxy = _M2_dense(Xvar, Yvar, weights=weights_x)
     Cyx = _M2_dense(Yvar, Xvar, weights=weights_y)
     Cxyyx[np.ix_(mask_X, mask_Y)] = Cxy
-    Cxyyx[np.ix_(mask_Y, mask_X)] += Cyx.T
+    Cxyyx[np.ix_(mask_Y, mask_X)] += Cyx
 
     return Cxxyy, Cxyyx
 
@@ -490,13 +512,16 @@ def _M2_symmetric(Xvar, Yvar, mask_X=None, mask_Y=None, xsum=0, xconst=0, ysum=0
                   weights_y=None):
     """ symmetric second moment matrices. Decide if we need dense, sparse, const"""
     if mask_X is None and mask_Y is None:
+        print "Making dense call."
         Cxxyy = _M2_dense(Xvar, Xvar, weights=weights_x) + _M2_dense(Yvar, Yvar, weights=weights_y)
         Cxy = _M2_dense(Xvar, Yvar, weights=weights_x)
         Cyx = _M2_dense(Yvar, Xvar, weights=weights_y)
         Cxyyx = Cxy + Cyx
     elif _is_zero(xsum) and _is_zero(ysum) or _is_zero(xconst) and _is_zero(yconst):
+        print "Making sparse call."
         Cxxyy, Cxyyx = _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y, weights_x=weights_x, weights_y=weights_y)
     else:
+        print "Making constant call."
         xvarsum = xsum[mask_X]  # to variable part
         yvarsum = ysum[mask_Y]  # to variable part
         Cxxyy = _M2_const(Xvar, mask_X, xvarsum, xconst, Xvar, mask_X, xvarsum, xconst, weights=weights_x) \
@@ -579,7 +604,7 @@ def moments_XX(X, remove_mean=False, modify_data=False, weights=None, sparse_mod
 
 
 def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, weights_x=None, weights_y=None,
-                 sparse_mode='auto', sparse_tol=0.0):
+                 time_lagged=False, sparse_mode='auto', sparse_tol=0.0):
     """ Computes the first two unnormalized moments of X and Y
 
     If symmetrize is False, computes
@@ -613,11 +638,13 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, w
         lead to surprises because your input array is changed.
     symmetrize : bool
         Computes symmetrized means and moments (see above)
-    weights_x: None or ndarray(T, )
+    weights_x : None or ndarray(T, )
         weights assigned to each trajectory point of X. If None, all data points have weight one.
         If ndarray, each data point is assigned a separate weight.
-    weights_y: None or ndarray(T, )
+    weights_y : None or ndarray(T, )
         same as weights_x for Y.
+    time_lagged : bool,
+        indicates that Y is a time-lagged version of X.
     sparse_mode : str
         one of:
             * 'dense' : always use dense mode
@@ -650,10 +677,15 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, w
         assert X.shape[0] == weights_x.shape[0], 'X and weights_x must have equal length'
         assert weights_y is not None, 'weights_x is not constant, but weights_y is not given'
         assert Y.shape[0] == weights_y.shape[0], 'Y and weights_y must have equal length'
+        # Weighted averages are limited to time-lagged case:
+        if not time_lagged:
+            time_lagged = True
+            warnings.warn('weights_x is not None requires that time_lagged is True. '
+                          'Setting of time_lagged will be ignored')
     else:
         if weights_y is not None:
             weights_y = None
-            print 'Warning: Values for weights_y will be ignored as weights_x is None'
+            warnings.warn('Values for weights_y will be ignored as weights_x is None')
     # sparsify
     X0, mask_X, xconst, Y0, mask_Y, yconst = _sparsify_pair(X, Y, remove_mean=remove_mean, modify_data=modify_data,
                                                             symmetrize=symmetrize, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
@@ -665,10 +697,13 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, w
     # sum / center
     w, sx, sx_centered, sy, sy_centered = _sum(X0, xmask=mask_X, xconst=xconst, Y=Y0, ymask=mask_Y, yconst=yconst,
                                                symmetric=symmetrize, remove_mean=remove_mean, weights_x=weights_x,
-                                               weights_y=weights_y)
+                                               weights_y=weights_y, time_lagged=time_lagged)
     if remove_mean:
         _center(X0, w, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
-        _center(Y0, w, sy, mask=mask_Y, const=yconst, inplace=True)  # fast in-place centering
+        if time_lagged:
+            _center(Y0, w, sx, mask=mask_Y, const=yconst, inplace=True)  # fast in-place centering
+        else:
+            _center(Y0, w, sy, mask=mask_Y, const=yconst, inplace=True)  # fast in-place centering
 
     if symmetrize:
         Cxx, Cxy = _M2_symmetric(X0, Y0, mask_X=mask_X, mask_Y=mask_Y,
@@ -683,7 +718,7 @@ def moments_XXXY(X, Y, remove_mean=False, modify_data=False, symmetrize=False, w
     return w, sx, sy, Cxx, Cxy
 
 
-def moments_block(X, Y, remove_mean=False, modify_data=False, weights=None,
+def moments_block(X, Y, remove_mean=False, modify_data=False,
                   sparse_mode='auto', sparse_tol=0.0):
     """ Computes the first two unnormalized moments of X and Y
 
@@ -711,9 +746,6 @@ def moments_block(X, Y, remove_mean=False, modify_data=False, weights=None,
         If remove_mean=True, the mean will be removed in the data matrix X,
         without creating an independent copy. This option is faster but might
         lead to surprises because your input array is changed.
-    weights: None or ndarray(T, )
-        weights assigned to each trajectory point. If None, all data points have weight one.
-        If ndarray, each data point is assigned a separate weight.
     sparse_mode : str
         one of:
             * 'dense' : always use dense mode
@@ -738,15 +770,6 @@ def moments_block(X, Y, remove_mean=False, modify_data=False, weights=None,
         C[0,0] = Cxx, C[0,1] = Cxy, C[1,0] = Cyx, C[1,1] = Cyy
 
     """
-    # Check consistency of inputs:
-    if weights_x is not None:
-        assert X.shape[0] == weights_x.shape[0], 'X and weights_x must have equal length'
-        assert weights_y is not None, 'weights_x is not constant, but weights_y is not given'
-        assert Y.shape[0] == weights_y.shape[0], 'Y and weights_y must have equal length'
-    else:
-        if weights_y is not None:
-            weights_y = None
-            print 'Warning: Values for weights_y will be ignored as weights_x is None'
     # sparsify
     X0, mask_X, xconst = _sparsify(X, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
     Y0, mask_Y, yconst = _sparsify(Y, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
@@ -756,18 +779,17 @@ def moments_block(X, Y, remove_mean=False, modify_data=False, weights=None,
     Y0, yconst = _copy_convert(Y0, const=yconst, copy=copy)
     # sum / center
     w, sx, sx_centered, sy, sy_centered = _sum(X0, xmask=mask_X, xconst=xconst, Y=Y0, ymask=mask_Y, yconst=yconst,
-                                               symmetric=False, remove_mean=remove_mean, weights_x=weights_x,
-                                               weights_y=weights_y)
+                                               symmetric=False, remove_mean=remove_mean)
     if remove_mean:
         _center(X0, w, sx, mask=mask_X, const=xconst, inplace=True)  # fast in-place centering
         _center(Y0, w, sy, mask=mask_Y, const=yconst, inplace=True)  # fast in-place centering
 
     Cxx = _M2(X0, X0, mask_X=mask_X, mask_Y=mask_X,
-              xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst, weights=weights)
+              xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst)
     Cxy = _M2(X0, Y0, mask_X=mask_X, mask_Y=mask_Y,
-              xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst, weights=weights)
+              xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst)
     Cyy = _M2(Y0, Y0, mask_X=mask_Y, mask_Y=mask_Y,
-              xsum=sy_centered, xconst=yconst, ysum=sy_centered, yconst=yconst, weights=weights)
+              xsum=sy_centered, xconst=yconst, ysum=sy_centered, yconst=yconst)
 
     return w, [sx, sy], [[Cxx, Cxy], [Cxy.T, Cyy]]
 
