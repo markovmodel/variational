@@ -181,7 +181,9 @@ class RunningCovar(object):
         if symmetrize and compute_YY:
             raise ValueError('Combining compute_YY and symmetrize=True is meaningless.')
         if time_lagged and compute_YY:
-            raise ValueError('Combining time_lagged and symmetrize=True is meaningless.')
+            raise ValueError('Combining time_lagged and compute_YY is meaningless.')
+        if time_lagged and remove_mean and not symmetrize:
+            raise ValueError('remove_mean only works for time-lagged data if symmetrize==True')
         if symmetrize and not compute_XY:
             warnings.warn('symmetrize=True has no effect with compute_XY=False.')
         if time_lagged and not compute_XY:
@@ -226,9 +228,6 @@ class RunningCovar(object):
         # Weights cannot be used for compute_YY:
         if weights is not None and self.compute_YY:
             raise ValueError('Cannot use weights when compute_YY is True')
-        # Weights can only be used for time-lagged data:
-        if weights is not None and not self.compute_XY and self.time_lagged:
-            raise ValueError('Weights can only be used for time-lagged data if compute_XY is True')
         # Check consistency for time-lagged case:
         if self.time_lagged and Y is not None:
             warnings.warn('Argument Y will be ignored because time-lagged is True')
@@ -249,20 +248,16 @@ class RunningCovar(object):
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
         elif self.compute_XX and self.compute_XY:
             if self.time_lagged:
-                Y = X[self.lag:, :]
-                X = X[:-self.lag, :]
+                Y1 = X[self.lag:, :]
+                X1 = X[:-self.lag, :]
                 if weights is not None:
-                    we_y = weights[self.lag:]
-                    we_x = weights[:-self.lag]
-                    w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean,
-                                                           symmetrize=self.symmetrize, weights_x=we_x, weights_y=we_y,
-                                                           time_lagged=True)
-                else:
-                    w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean,
-                                                           symmetrize=self.symmetrize, time_lagged=True)
+                    weights = weights[:-self.lag]
+                w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X1, Y1, remove_mean=self.remove_mean, symmetrize=self.symmetrize,
+                                                       weights=weights)
             else:
                 assert Y is not None
-                w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize)
+                w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize,
+                                                       weights=weights)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
             self.storage_XY.store(Moments(w, s_X, s_Y, C_XY))
@@ -335,7 +330,7 @@ class RunningCovar(object):
         return self.storage_YY.moments.covar
 
 
-def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=False, nsave=5):
+def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=False, time_lagged=False, lag=1, nsave=5):
     """ Returns a running covariance estimator
 
     Returns an estimator object that can be fed chunks of X and Y data, and
@@ -365,5 +360,5 @@ def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=Fal
     .. [1] http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
 
     """
-    return RunningCovar(compute_XX=xx, compute_XY=xy, compute_YY=yy,
+    return RunningCovar(compute_XX=xx, compute_XY=xy, compute_YY=yy, time_lagged=time_lagged, lag=lag,
                         remove_mean=remove_mean, symmetrize=symmetrize, nsave=nsave)
