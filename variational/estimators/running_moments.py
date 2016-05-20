@@ -182,8 +182,6 @@ class RunningCovar(object):
             raise ValueError('Combining compute_YY and symmetrize=True is meaningless.')
         if time_lagged and compute_YY:
             raise ValueError('Combining time_lagged and compute_YY is meaningless.')
-        if time_lagged and remove_mean and not symmetrize:
-            raise ValueError('remove_mean only works for time-lagged data if symmetrize==True')
         if symmetrize and not compute_XY:
             warnings.warn('symmetrize=True has no effect with compute_XY=False.')
         if time_lagged and not compute_XY:

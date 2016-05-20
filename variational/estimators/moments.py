@@ -288,7 +288,10 @@ def _sum(X, xmask=None, xconst=None, Y=None, ymask=None, yconst=None, symmetric=
     if Y is not None and symmetric:
         sx = sx_raw + sy_raw
         sy = sx
-        w = 2 * T
+        if weights is not None:
+            w = 2*np.sum(weights)
+        else:
+            w = 2 * T
     else:
         sx = sx_raw
         sy = sy_raw
@@ -468,7 +471,7 @@ def _M2_sparse(Xvar, mask_X, Yvar, mask_Y, weights=None):
     return C
 
 
-def _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y):
+def _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y, weights=None):
     """ 2nd self-symmetric moment matrix exploiting zero input columns
 
     Computes X'X + Y'Y and X'Y + Y'X
@@ -477,13 +480,14 @@ def _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y):
     assert len(mask_X) == len(mask_Y), 'X and Y need to have equal sizes for symmetrization'
 
     Cxxyy = np.zeros((len(mask_X), len(mask_Y)))
-    Cxxyy[np.ix_(mask_X, mask_X)] = _M2_dense(Xvar, Xvar)
-    Cxxyy[np.ix_(mask_Y, mask_Y)] += _M2_dense(Yvar, Yvar)
+    Cxxyy[np.ix_(mask_X, mask_X)] = _M2_dense(Xvar, Xvar, weights=weights)
+    Cxxyy[np.ix_(mask_Y, mask_Y)] += _M2_dense(Yvar, Yvar, weights=weights)
 
     Cxyyx = np.zeros((len(mask_X), len(mask_Y)))
-    Cxy = _M2_dense(Xvar, Yvar)
+    Cxy = _M2_dense(Xvar, Yvar, weights=weights)
+    Cyx = _M2_dense(Yvar, Xvar, weights=weights)
     Cxyyx[np.ix_(mask_X, mask_Y)] = Cxy
-    Cxyyx[np.ix_(mask_Y, mask_X)] += Cxy.T
+    Cxyyx[np.ix_(mask_Y, mask_X)] += Cyx
 
     return Cxxyy, Cxyyx
 
@@ -498,21 +502,23 @@ def _M2(Xvar, Yvar, mask_X=None, mask_Y=None, xsum=0, xconst=0, ysum=0, yconst=0
         return _M2_const(Xvar, mask_X, xsum[mask_X], xconst, Yvar, mask_Y, ysum[mask_Y], yconst, weights=weights)
 
 
-def _M2_symmetric(Xvar, Yvar, mask_X=None, mask_Y=None, xsum=0, xconst=0, ysum=0, yconst=0):
+def _M2_symmetric(Xvar, Yvar, mask_X=None, mask_Y=None, xsum=0, xconst=0, ysum=0, yconst=0, weights=None):
     """ symmetric second moment matrices. Decide if we need dense, sparse, const"""
     if mask_X is None and mask_Y is None:
-        Cxxyy = _M2_dense(Xvar, Xvar) + _M2_dense(Yvar, Yvar)
-        Cxy = _M2_dense(Xvar, Yvar)
-        Cxyyx = Cxy + Cxy.T
+        Cxxyy = _M2_dense(Xvar, Xvar, weights=weights) + _M2_dense(Yvar, Yvar, weights=weights)
+        Cxy = _M2_dense(Xvar, Yvar, weights=weights)
+        Cyx = _M2_dense(Yvar, Xvar, weights=weights)
+        Cxyyx = Cxy + Cyx
     elif _is_zero(xsum) and _is_zero(ysum) or _is_zero(xconst) and _is_zero(yconst):
-        Cxxyy, Cxyyx = _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y)
+        Cxxyy, Cxyyx = _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y, weights=weights)
     else:
         xvarsum = xsum[mask_X]  # to variable part
         yvarsum = ysum[mask_Y]  # to variable part
-        Cxxyy = _M2_const(Xvar, mask_X, xvarsum, xconst, Xvar, mask_X, xvarsum, xconst) \
-                + _M2_const(Yvar, mask_Y, yvarsum, yconst, Yvar, mask_Y, yvarsum, yconst)
-        Cxy = _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst)
-        Cxyyx = Cxy + Cxy.T
+        Cxxyy = _M2_const(Xvar, mask_X, xvarsum, xconst, Xvar, mask_X, xvarsum, xconst, weights=weights) \
+                + _M2_const(Yvar, mask_Y, yvarsum, yconst, Yvar, mask_Y, yvarsum, yconst, weights=weights)
+        Cxy = _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst, weights=weights)
+        Cyx = _M2_const(Yvar, mask_Y, yvarsum, yconst, Xvar, mask_X, xvarsum, xconst, weights=weights)
+        Cxyyx = Cxy + Cyx
     return Cxxyy, Cxyyx
 
 
@@ -659,10 +665,6 @@ def moments_XXXY(X, Y, remove_mean=False, symmetrize=False, weights=None,
         assert Y.shape[0] == X.shape[0], 'X and Y must have equal length.'
     if weights is not None:
         assert X.shape[0] == weights.shape[0], 'X and weights_x must have equal length'
-        # Weighted averages are limited to time-lagged case:
-        if symmetrize:
-            symmetrize = False
-            warnings.warn('symmetrization is disabled for weighted data.')
     # sparsify
     X0, mask_X, xconst, Y0, mask_Y, yconst = _sparsify_pair(X, Y, remove_mean=remove_mean, modify_data=modify_data,
                                                             symmetrize=symmetrize, sparse_mode=sparse_mode, sparse_tol=sparse_tol)
@@ -680,7 +682,7 @@ def moments_XXXY(X, Y, remove_mean=False, symmetrize=False, weights=None,
 
     if symmetrize:
         Cxx, Cxy = _M2_symmetric(X0, Y0, mask_X=mask_X, mask_Y=mask_Y,
-                                 xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst)
+                                 xsum=sx_centered, xconst=xconst, ysum=sy_centered, yconst=yconst, weights=weights)
     else:
         Cxx = _M2(X0, X0, mask_X=mask_X, mask_Y=mask_X,
                   xsum=sx_centered, xconst=xconst, ysum=sx_centered, yconst=xconst, weights=weights)

@@ -213,7 +213,7 @@ In some cases, a symmetric correlation matrix is desired, for example if
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray*}
-\overline{x}(i) & = & \frac{1}{2T}\left[\sum_{t=1}^{T}x_{t}(i)+\sum_{t=1}^{T}y_{t}(i)\right],
+\overline{x}(i) & = & \frac{1}{2W_{T}}\left[\sum_{t=1}^{T}w_{t}x_{t}(i)+\sum_{t=1}^{T}w_{t}y_{t}(i)\right],
 \end{eqnarray*}
 
 \end_inset
@@ -224,24 +224,13 @@ and defining the symmetrized correlation by
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray*}
-C_{s}(i,j) & = & \sum_{t=1}^{T}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{x}(j)\right)\\
- &  & +\sum_{t=1}^{T}\left(y_{t}(i)-\overline{x}(i)\right)\left(x_{t}(j)-\overline{x}(j)\right).
+C_{s}(i,j) & = & \sum_{t=1}^{T}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{x}(j)\right)\\
+ &  & +\sum_{t=1}^{T}w_{t}\left(y_{t}(i)-\overline{x}(i)\right)\left(x_{t}(j)-\overline{x}(j)\right).
 \end{eqnarray*}
 
 \end_inset
 
-Please note that we do not allow time-dependent weights here, as this would
- lead to problems in the derivations of section 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "sec:Proofs"
-
-\end_inset
-
-.
- Also, it is questionable if a symmetrization makes sense for weighted correlati
-ons.
- Using the analogues of Eqs.
+Using the analogues of Eqs.
  
 \begin_inset CommandInset ref
 LatexCommand eqref
@@ -256,21 +245,13 @@ reference "eq:chunk_definitions_5"
 
 \end_inset
 
-, where all 
-\begin_inset Formula $w_{t}$
-\end_inset
-
- are set to one and consequently, 
-\begin_inset Formula $W_{T_{1}}=T_{1},\, W_{T_{2}}=T_{2}$
-\end_inset
-
 , we arrive at the updating formula
 \end_layout
 
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray}
-C_{s}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+\frac{2T_{1}T_{2}}{T_{1}+T_{2}}\left(\overline{x_{T_{2}}}(i)-\overline{x_{T_{1}}}(i)\right)\left(\overline{x_{T_{2}}}(j)-\overline{x_{T_{1}}}(j)\right),\label{eq:Updata_Sym}
+C_{s}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+\frac{2W_{T_{1}}W_{T_{2}}}{W_{T}}\left(\overline{x_{T_{2}}}(i)-\overline{x_{T_{1}}}(i)\right)\left(\overline{x_{T_{2}}}(j)-\overline{x_{T_{1}}}(j)\right),\label{eq:Updata_Sym}
 \end{eqnarray}
 
 \end_inset
@@ -319,18 +300,11 @@ reference "sec:Proofs"
 \end_layout
 
 \begin_layout Section
-Time-lagged data
+Time-lagged Data without Symmetrization
 \end_layout
 
 \begin_layout Standard
-If time-lagged data is used without symmetrization, it seems more consistent
- to define the means only using the 
-\begin_inset Formula $x_{t}(i)$
-\end_inset
-
- time series.
- Here, weights can again be allowed.
- Thus, we now assume to be given a time-series 
+If we assume to be given a time-series 
 \begin_inset Formula $\tilde{x_{t}}(i),\, t=1,\ldots,T+\tau$
 \end_inset
 
@@ -343,24 +317,37 @@ If time-lagged data is used without symmetrization, it seems more consistent
 \end_inset
 
 .
- The mean is defined by
+ If we do not wish to symmetrize the correlations, it seems most consistent
+ to use the weights of the first 
+\begin_inset Formula $T$
+\end_inset
+
+ steps, 
+\begin_inset Formula $w_{t},\, t=1,\ldots,T$
+\end_inset
+
+, only.
+ The means are thus defined by
 \end_layout
 
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray*}
-\overline{x}(i) & = & \frac{1}{W_{T}}\sum_{t=1}^{T}w_{t}x_{t}(i)
+\overline{x}(i) & = & \frac{1}{W_{T}}\sum_{t=1}^{T}w_{t}x_{t}(i)\\
+\overline{y}(i) & = & \frac{1}{W_{T}}\sum_{t=1}^{T}w_{t}y_{t}(i)\\
+ & = & \frac{1}{W_{T}}\sum_{t=\tau}^{T+\tau}w_{t-\tau}\tilde{x}_{t}\\
+W_{T} & = & \sum_{t=1}^{T}w_{t}.
 \end{eqnarray*}
 
 \end_inset
 
-and the asymmetric correlation then becomes
+The asymmetric correlation then becomes
 \end_layout
 
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray*}
-C_{a}(i,j) & = & \sum_{t=1}^{T}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{x}(j)\right).
+C_{a}(i,j) & = & \sum_{t=1}^{T}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{y}(j)\right).
 \end{eqnarray*}
 
 \end_inset
@@ -380,16 +367,21 @@ reference "eq:chunk_definitions_5"
 
 \end_inset
 
-, we find the updating formula for time-lagged data:
+, we find the updating formula for time-lagged data to be the same as Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Update_Standard"
+
+\end_inset
+
+:
 \end_layout
 
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray}
-C_{a}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+\frac{W_{T_{1}}W_{T_{2}}}{W_{T}}\left(\overline{x_{T_{2}}}(i)-\overline{x_{T_{1}}}(i)\right)\left(\overline{x_{T_{2}}}(j)-\overline{x_{T_{1}}}(j)\right)\nonumber \\
- &  & +\gamma_{1}(i)\sum_{t=1}^{T_{1}}w_{t}\left(y_{t}(j)-\overline{x_{T_{1}}}(j)\right)+\gamma_{2}(i)\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(y_{t}(j)-\overline{x_{T_{2}}}(j)\right),\label{eq:Update_Asym}\\
-\gamma_{1}(i) & = & \overline{x}(i)-\overline{x_{T_{1}}}(i),\nonumber \\
-\gamma_{2}(i) & = & \overline{x}(i)-\overline{x_{T_{2}}}(i).\nonumber 
+C_{a}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+\frac{W_{T_{1}}W_{T_{2}}}{W_{T}}\left(\overline{x_{T_{2}}}(i)-\overline{x_{T_{1}}}(i)\right)\left(\overline{y_{T_{2}}}(j)-\overline{y_{T_{1}}}(j)\right)\label{eq:Update_Asym}
 \end{eqnarray}
 
 \end_inset
@@ -413,23 +405,14 @@ We have shown that mean-free correlations can be easily computed in chunks
 
 , including time-dependent weights.
  Moreover, symmetrized mean-free correlations can be computed for arbitrary
- time-series, which can also be time-lagged copies, but the addition of
- weights does not make sense here.
+ time-series, which can also be time-lagged copies.
  Finally, we found that for time-lagged time series which are not supposed
- to be symmetrized, it seems to make sense to compute the means only through
- the 
-\begin_inset Formula $x_{t}$
+ to be symmetrized, it seems to make sense to compute the means using the
+ weights of the first 
+\begin_inset Formula $T$
 \end_inset
 
- series, but this leads to problems when chunk-wise estimation is desired,
- because the updating formulas require knowledge of the final mean.
-\end_layout
-
-\begin_layout Standard
-Thus, we run into problems for time-lagged correlations between when short
- trajectories are used and we wish to substract the empirical mean from
- the data.
- I wonder, however, if we need to take care of this case.
+ steps.
 \end_layout
 
 \begin_layout Section
@@ -524,8 +507,8 @@ It remains to deal with the term:
 \begin{eqnarray}
 W_{T_{1}}\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)+W_{T_{2}}\gamma_{2}^{x}(i)\gamma_{2}^{y}(j) & = & W_{T_{1}}\left(\overline{x}(i)\overline{y}(j)-\overline{x}(i)\overline{y_{T_{1}}}(j)-\overline{x_{T_{1}}}(i)\overline{y}(j)+\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)\right)\nonumber \\
  &  & +W_{T_{2}}\left(\overline{x}(i)\overline{y}(j)-\overline{x}(i)\overline{y_{T_{2}}}(j)-\overline{x_{T_{2}}}(i)\overline{y}(j)+\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)\right)\label{eq:Gamma_Reformulation_0}\\
- & = & \left(W_{T_{1}}+W_{T_{2}}\right)\overline{x}(i)\overline{y}(j)+W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{x_{T_{1}}}(j)\nonumber \\
- &  & +W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{x_{T_{1}}}(j)-\overline{x}(i)\left(W_{T_{1}}\overline{y_{T_{1}}}(j)+W_{T_{2}}\overline{y_{T_{2}}}(j)\right)\nonumber \\
+ & = & \left(W_{T_{1}}+W_{T_{2}}\right)\overline{x}(i)\overline{y}(j)+W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)\nonumber \\
+ &  & +W_{T_{2}}\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)-\overline{x}(i)\left(W_{T_{1}}\overline{y_{T_{1}}}(j)+W_{T_{2}}\overline{y_{T_{2}}}(j)\right)\nonumber \\
  &  & -\overline{y}(j)\left(W_{T_{1}}\overline{x_{T_{1}}}(i)+W_{T_{2}}\overline{x_{T_{2}}}(i)\right).\label{eq:Gamma_Reformulation_1}
 \end{eqnarray}
 
@@ -541,10 +524,10 @@ Now, we use that
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray}
- & = & W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{x_{T_{1}}}(j)++W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{x_{T_{1}}}(j)\nonumber \\
+ & = & W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)++W_{T_{2}}\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)\nonumber \\
  &  & -\overline{x}(i)\left(W_{T_{1}}\overline{y_{T_{1}}}(j)+W_{T_{2}}\overline{y_{T_{2}}}(j)\right)\label{eq:Gamma_Reformulation_2}\\
- & = & \frac{1}{W_{T}}\left[W_{T}\left(W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{x_{T_{1}}}(j)++W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{x_{T_{1}}}(j)\right)\right]\nonumber \\
- &  & -\frac{1}{W_{T}}\left[W_{T}\overline{x}(i)\left(W_{T_{1}}\overline{x_{T_{1}}}(i)+W_{T_{2}}\overline{x_{T_{2}}}(i)\right)\right]\label{eq:Gamma_Reformulation_3}\\
+ & = & \frac{1}{W_{T}}\left[W_{T}\left(W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)++W_{T_{2}}\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)\right)\right]\nonumber \\
+ &  & -\frac{1}{W_{T}}\left[W_{T}\overline{x}(i)\left(W_{T_{1}}\overline{y_{T_{1}}}(j)+W_{T_{2}}\overline{y_{T_{2}}}(j)\right)\right]\label{eq:Gamma_Reformulation_3}\\
  & = & \frac{W_{T_{1}}W_{T_{2}}}{W_{T}}\left[\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)+\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)-\overline{x_{T_{1}}}(i)\overline{y_{T_{2}}}(j)-\overline{x_{T_{2}}}(i)\overline{y_{T_{1}}}(j)\right].\label{eq:Gamma_Reformulation_4}
 \end{eqnarray}
 
@@ -580,8 +563,8 @@ reference "eq:Splitting_Cij_4"
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray*}
-C_{s}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+T_{1}\left(\gamma_{1}(i)\gamma_{1}(j)+\gamma_{1}(j)\gamma_{1}(i)\right)\\
- &  & +T_{2}\left(\gamma_{2}(i)\gamma_{2}(j)+\gamma_{2}(j)\gamma_{2}(i)\right),
+C_{s}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+W_{T_{1}}\left(\gamma_{1}(i)\gamma_{1}(j)+\gamma_{1}(j)\gamma_{1}(i)\right)\\
+ &  & +W_{T_{2}}\left(\gamma_{2}(i)\gamma_{2}(j)+\gamma_{2}(j)\gamma_{2}(i)\right),
 \end{eqnarray*}
 
 \end_inset
@@ -591,15 +574,6 @@ where
 \end_inset
 
 .
- Please note that for time-dependent weights, the cross-terms in Eq.
- 
-\begin_inset CommandInset ref
-LatexCommand eqref
-reference "eq:Splitting_Cij_3"
-
-\end_inset
-
- would not cancel.
  Then, the steps of Eqs.
  
 \begin_inset CommandInset ref
@@ -637,19 +611,20 @@ reference "eq:Splitting_Cij_4"
 \begin_layout Standard
 \begin_inset Formula 
 \begin{eqnarray*}
-C_{a}(i,j) & = & S_{T_{!}}(i,j)+S_{T_{2}}(i,j)+W_{T_{1}}\gamma_{1}(i)\gamma_{1}(j)+W_{T_{2}}\gamma_{2}(i)\gamma_{2}(j)\\
- &  & ++\gamma_{1}(i)\sum_{t=1}^{T_{1}}w_{t}\left(y_{t}(j)-\overline{x_{T_{1}}}(j)\right)+\gamma_{2}(i)\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(y_{t}(j)-\overline{x_{T_{2}}}(j)\right).
+C_{a}(i,j) & = & S_{T_{!}}(i,j)+S_{T_{2}}(i,j)+W_{T_{1}}\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)+W_{T_{2}}\gamma_{2}^{x}(i)\gamma_{2}^{y}(j)\\
+ &  & -\gamma_{1}^{x}(i)\sum_{t=1}^{T_{1}}w_{t}\left(y_{t}(j)-\overline{y_{T_{1}}}(j)\right)-\gamma_{1}^{y}(j)\sum_{t=1}^{T_{1}}w_{t}\left(x_{t}(i)-\overline{x_{T_{1}}}(i)\right)\\
+ &  & -\gamma_{2}^{x}(i)\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(y_{t}(j)-\overline{y_{T_{2}}}(j)\right)-\gamma_{2}^{y}(j)\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(x_{t}(i)-\overline{x_{T_{2}}}(i)\right).
 \end{eqnarray*}
 
 \end_inset
 
 Here, we have used 
-\begin_inset Formula $\gamma_{k}(i)=\overline{x}(i)-\overline{x_{T_{k}}}(i)$
+\begin_inset Formula $\gamma_{k}^{x}(i)=\overline{x}(i)-\overline{x_{T_{k}}}(i),\,\gamma_{k}^{y}(i)=\overline{y}(i)-\overline{y_{T_{k}}}(i)$
 \end_inset
 
 .
- The expression 
-\begin_inset Formula $W_{T_{1}}\gamma_{1}(i)\gamma_{1}(j)+W_{T_{2}}\gamma_{2}(i)\gamma_{2}(j)$
+ The cross-terms cancel out and the expression 
+\begin_inset Formula $W_{T_{1}}\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)+W_{T_{2}}\gamma_{2}^{x}(i)\gamma_{2}^{y}(j)$
 \end_inset
 
  can be reformulated through Eqs.
