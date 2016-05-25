@@ -2,7 +2,7 @@ import numpy as np
 import scipy.linalg as scl
 
 
-def filter_eigenvalues(l, R, ep=0.36, ep1=1e-2, return_indices=False):
+def filter_eigenvalues(l, R=None, ep=0.36, ep1=1e-2, return_indices=False):
     """
     Filter out meaningful eigenvalues:
 
@@ -22,15 +22,21 @@ def filter_eigenvalues(l, R, ep=0.36, ep1=1e-2, return_indices=False):
     # Remove complex or meaningless eigenvalues:
     ind1 = np.where(np.logical_and((l <= 1 + ep1), np.logical_and((l >= ep), np.isreal(l))))[0]
     l = np.real(l[ind1])
-    R = np.real(R[:, ind1])
+    if R is not None:
+        R = np.real(R[:, ind1])
     # Sort the eigenvalues:
     ind2 = np.argsort(l)[::-1]
     l = l[ind2]
-    R = R[:, ind2]
-    if return_indices:
+    if R is not None:
+        R = R[:, ind2]
+    if return_indices and R is not None:
         return l, R, ind1[ind2]
-    else:
+    elif return_indices:
+        return l, ind1[ind2]
+    elif R is not None:
         return l, R
+    else:
+        return l
 
 
 
@@ -76,6 +82,42 @@ def eigenvalue_estimation(Ct, C2t, ep=0.36):
     l, R, ind = filter_eigenvalues(l, R, ep=ep, return_indices=True)
     VEq = VEq[:, ind]
     return l, VEq
+
+def oom_estimation(Ct, C2t, ep=0.36):
+    """
+    Perform steps from OOM-estimation method.
+
+    """
+    # Get the number of states:
+    N = Ct.shape[0]
+    # Get the SVD of Ctau:
+    U, s, V = scl.svd(Ct, full_matrices=False)
+    # Discard close-to-zero singular values:
+    ind = np.where(s > 1e-16)[0]
+    s = s[ind]
+    U = U[:, ind]
+    V = V[ind, :].transpose()
+    # Define transformation matrices:
+    F1 = np.dot(U, np.diag(s**(-0.5)))
+    F2 = np.dot(V, np.diag(s**(-0.5)))
+    # Get the number of slow processes:
+    M = F1.shape[1]
+    # Compute observable operators:
+    E = np.zeros((N, M, M))
+    for n in range(N):
+        E[n, :, :] = np.dot(F1.T, np.dot(C2t[n, :, :], F2))
+    E_Omega = np.sum(E, axis=0)
+    # Dominant eigenvalues:
+    l, _ = scl.eig(E_Omega)
+    l = filter_eigenvalues(l, ep=ep)
+    # Compute evaluator:
+    ci = np.sum(Ct, axis=1)
+    sigma = np.dot(F1.T, ci)
+    # Compute information state:
+    l0, omega_0 = scl.eig(E_Omega.T)
+    _, omega_0 = filter_eigenvalues(l0, omega_0, ep=0.8)
+    omega_0 = omega_0[:, 0] / np.dot(omega_0[:, 0], sigma)
+    return l, E, omega_0, sigma
 
 def correct_stationary_vector(VEq):
     """
