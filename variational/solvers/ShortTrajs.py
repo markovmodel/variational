@@ -40,7 +40,7 @@ def filter_eigenvalues(l, R=None, ep=0.36, ep1=1e-2, return_indices=False):
 
 
 
-def eigenvalue_estimation(Ct, C2t, ep=0.36):
+def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
     """
     Perform estimation of dominant system eigenvalues from short time simulations.
 
@@ -79,11 +79,11 @@ def eigenvalue_estimation(Ct, C2t, ep=0.36):
     VEq = np.dot(np.diag(l**(-0.5)), np.dot(Rp, np.dot(F1.T, Ct)))
     VEq = np.real(VEq.T)
     # Remove complex or meaningless eigenvalues:
-    l, R, ind = filter_eigenvalues(l, R, ep=ep, return_indices=True)
+    l, R, ind = filter_eigenvalues(l, R, ep=ep, ep1=ep1, return_indices=True)
     VEq = VEq[:, ind]
     return l, VEq
 
-def oom_estimation(Ct, C2t, ep=0.36):
+def oom_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
     """
     Perform steps from OOM-estimation method.
 
@@ -109,13 +109,13 @@ def oom_estimation(Ct, C2t, ep=0.36):
     E_Omega = np.sum(E, axis=0)
     # Dominant eigenvalues:
     l, _ = scl.eig(E_Omega)
-    l = filter_eigenvalues(l, ep=ep)
+    l = filter_eigenvalues(l, ep=ep, ep1=ep1)
     # Compute evaluator:
     ci = np.sum(Ct, axis=1)
     sigma = np.dot(F1.T, ci)
     # Compute information state:
     l0, omega_0 = scl.eig(E_Omega.T)
-    _, omega_0 = filter_eigenvalues(l0, omega_0, ep=0.8)
+    _, omega_0 = filter_eigenvalues(l0, omega_0, ep=0.8, ep1=ep1)
     omega_0 = omega_0[:, 0] / np.dot(omega_0[:, 0], sigma)
     return l, E, omega_0, sigma
 
