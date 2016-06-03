@@ -164,8 +164,7 @@ metadata=dict(
     classifiers=CLASSIFIERS.splitlines(),
     #package_dir={'variational': 'variational'},
     packages=find_packages(),
-    package_data={'variational.basisset':['ResiduesEigenvectors/*'],
-                  'variational.estimators.tests':['TestData.npz'],
+    package_data={'variational.basisset':['ResiduesEigenvectors/*']
                   },
     zip_safe=False,
     install_requires=[
