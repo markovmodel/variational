@@ -54,3 +54,58 @@ def stationary_vector_koopman(C0, Ct, ex, ey, ep=1e-10):
     u = Ut[:, 0]
     u = u / np.dot(u, v)
     return u, v, Ct
+
+def reweight_trajectory(X, est, u):
+    """
+    This function re-weights a trajectory using the stationary weights computed by approximating the
+    Koopman operator.
+
+    Parameters:
+    -----------
+    X : ndarray (T, N)
+      evaluation of N basis function over T time steps.
+    est : RunningCovar estimator,
+        the trajectory will be added to this estimator with new weights.
+    u, ndarray (N,)
+        expansion coefficients of stat. density from basis (i.e. left eigenvector of Koopman matrix.
+
+    Returns:
+    --------
+    est,
+        the RunningCovar estimator after adding X.
+
+    """
+    # Determine the weights from u:
+    w = np.dot(X, u)
+    # Add to the estimator:
+    est.add(X, weights=w)
+    return est
+
+def equilibrium_correlation(est, K):
+    """
+    Compute equilibrium correlation matrices from re-weighted data.
+
+    Parameters:
+    -----------
+    est : RunningCovar estimator,
+        containing the instantaneous correlation matrix from re-weighted data.
+    K : ndarray (N, N)
+        the approximation of the Koopman operator from the basis.
+
+    Returns:
+    --------
+    C0, ndarray (N, N)
+        the equilibrium instantaneous correlation matrix.
+    Ct, ndarray (N, N)
+        the equilibrium time-lagged correlation matrix.
+
+    """
+    # Get C0:
+    C0 = est.cov_XX()
+    # Compute Ct:
+    C0_inv = scl.pinv(C0)
+    K0 = np.dot(C0, K)
+    Ct = 0.5*np.dot(C0_inv, K0 + K0.T)
+    return C0, Ct
+
+
