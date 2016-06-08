@@ -174,7 +174,7 @@ class RunningCovar(object):
     # to get the Y mean, but this is currently not stored.
     def __init__(self, compute_XX=True, compute_XY=False, compute_YY=False,
                  remove_mean=False, symmetrize=False, time_lagged=False, lag=1,
-                 nsave=5):
+                 nsave=5, sparse_mode='auto'):
         # check input
         if not compute_XX and not compute_XY:
             raise ValueError('One of compute_XX or compute_XY must be True.')
@@ -201,6 +201,7 @@ class RunningCovar(object):
         self.symmetrize = symmetrize
         self.time_lagged = time_lagged
         self.lag = lag
+        self.sparse_mode = sparse_mode
 
     def add(self, X, Y=None, weights=None):
         """
@@ -242,7 +243,7 @@ class RunningCovar(object):
                 raise TypeError('weights is of type %s, must be a number or ndarray'%(type(weights)))
         # estimate and add to storage
         if self.compute_XX and not self.compute_XY:
-            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean, weights=weights)
+            w, s_X, C_XX = moments_XX(X, remove_mean=self.remove_mean, weights=weights, sparse_mode=self.sparse_mode)
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
         elif self.compute_XX and self.compute_XY:
             if self.time_lagged:
@@ -251,11 +252,11 @@ class RunningCovar(object):
                 if weights is not None:
                     weights = weights[:-self.lag]
                 w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X1, Y1, remove_mean=self.remove_mean, symmetrize=self.symmetrize,
-                                                       weights=weights)
+                                                       weights=weights, sparse_mode=self.sparse_mode)
             else:
                 assert Y is not None
                 w, s_X, s_Y, C_XX, C_XY = moments_XXXY(X, Y, remove_mean=self.remove_mean, symmetrize=self.symmetrize,
-                                                       weights=weights)
+                                                       weights=weights, sparse_mode=self.sparse_mode)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s_X, s_X, C_XX))
             self.storage_XY.store(Moments(w, s_X, s_Y, C_XY))
