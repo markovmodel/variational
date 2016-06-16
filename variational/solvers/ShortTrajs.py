@@ -2,7 +2,7 @@ import numpy as np
 import scipy.linalg as scl
 
 
-def filter_eigenvalues(l, R=None, ep=0.36, ep1=1e-2, return_indices=False):
+def filter_eigenvalues(l, R=None, ep=0.36, ep1=1e-2, ep_im=0.0):
     """
     Filter out meaningful eigenvalues:
 
@@ -16,31 +16,37 @@ def filter_eigenvalues(l, R=None, ep=0.36, ep1=1e-2, return_indices=False):
         tolerance to accept only eigenvalues larger than ep.
     ep1, float:
         tolerance to accept eigenvalues which are smaller 1 + ep1.
-    return_indices, bool:
-        return the sorting indices after sorting the eigenvalues
+    ep_im, float:
+        tolerance governing how much of an imaginary part is accepted to due statistical noise.
     """
-    # Remove complex or meaningless eigenvalues:
-    ind1 = np.where(np.logical_and((l <= 1 + ep1), np.logical_and((l >= ep), np.isreal(l))))[0]
-    l = np.real(l[ind1])
+    # Remove meaningless eigenvalues:
+    ind1 = np.where(np.logical_and(l <= 1 + ep1, l >= ep))[0]
+    l = l[ind1]
     if R is not None:
-        R = np.real(R[:, ind1])
-    # Sort the eigenvalues:
-    ind2 = np.argsort(l)[::-1]
+        R = R[:, ind1]
+    # Remove eigenvalues with imaginary part greater than ep_im:
+    ind2 = np.where(np.abs(np.imag(l)) <= ep_im)[0]
     l = l[ind2]
     if R is not None:
         R = R[:, ind2]
-    if return_indices and R is not None:
-        return l, R, ind1[ind2]
-    elif return_indices:
-        return l, ind1[ind2]
-    elif R is not None:
-        return l, R
+    # Discard all imaginary parts:
+    l = np.real(l)
+    if R is not None:
+        R = np.real(R)
+    # Sort the eigenvalues:
+    ind3 = np.argsort(l)[::-1]
+    l = l[ind3]
+    ind_final = ind1[ind2[ind3]]
+    if R is not None:
+        R = R[:, ind3]
+    if R is not None:
+        return l, R, ind_final
     else:
-        return l
+        return l, ind_final
 
 
 
-def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
+def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2, ep_im=1e-2):
     """
     Perform estimation of dominant system eigenvalues from short time simulations.
 
@@ -52,6 +58,10 @@ def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
         correlation matrix between N basis functions at lag time 2*tau.
     ep, float:
         tolerance to use only eigenvalues greater than ep.
+    ep1, float:
+        tolerance governing how much larger than one the eigenvalues are allowed to be.
+    ep_im, float:
+        tolerance governing how much of an imaginary part is accepted to due statistical noise.
 
     Returns:
     --------
@@ -74,12 +84,12 @@ def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
     # Solve eigenvalue problem:
     W = np.dot(F1.transpose(), np.dot(C2t, F2))
     l, R = scl.eig(W)
-    # Extract VEq:
-    Rp = scl.inv(R)
+    # Compute VEq:
+    Rp = scl.pinv(R)
     VEq = np.dot(np.diag(l**(-0.5)), np.dot(Rp, np.dot(F1.T, Ct)))
     VEq = np.real(VEq.T)
     # Remove complex or meaningless eigenvalues:
-    l, R, ind = filter_eigenvalues(l, R, ep=ep, ep1=ep1, return_indices=True)
+    l, R, ind = filter_eigenvalues(l, R, ep=ep, ep1=ep1, ep_im=ep_im)
     VEq = VEq[:, ind]
     return l, VEq
 
@@ -107,17 +117,14 @@ def oom_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
     for n in range(N):
         E[n, :, :] = np.dot(F1.T, np.dot(C2t[n, :, :], F2))
     E_Omega = np.sum(E, axis=0)
-    # Dominant eigenvalues:
-    l, _ = scl.eig(E_Omega)
-    l = filter_eigenvalues(l, ep=ep, ep1=ep1)
     # Compute evaluator:
     ci = np.sum(Ct, axis=1)
     sigma = np.dot(F1.T, ci)
     # Compute information state:
     l0, omega_0 = scl.eig(E_Omega.T)
-    _, omega_0 = filter_eigenvalues(l0, omega_0, ep=0.8, ep1=ep1)
+    _, omega_0, _ = filter_eigenvalues(l0, omega_0, ep=0.8, ep1=ep1)
     omega_0 = omega_0[:, 0] / np.dot(omega_0[:, 0], sigma)
-    return l, E, omega_0, sigma
+    return E, omega_0, sigma
 
 def correct_stationary_vector(VEq):
     """
@@ -134,41 +141,3 @@ def correct_stationary_vector(VEq):
         stationary vector of the N microstates.
     """
     return VEq[:, 0] / np.sum(VEq[:, 0])
-
-def correct_transition_matrix(l, VEq, sigma, ptau):
-    """
-    Computes corrected equilibrium correlation matrix between N discrete states from local equilibrium data.
-
-    Parameters:
-    -----------
-    l, ndarray(M,)
-        dominant eigenvalues of the system at lag time tau.
-    VEq, ndarray(N, M):
-        matrix of overlaps between N discrete states with M dominant eigenfunctions.
-    sigma, ndarray(N,):
-        array of starting probabilities for discrete states.
-    ptau, ndarray(N,):
-        array of probabilities for discrete states at time tau.
-
-    Returns:
-    Ctau, ndarray(N, N):
-        equilibrium correlation matrix at lag time tau.
-    pi, ndarray(N,):
-        stationary vector of the discrete states.
-    """
-    # Get the stationary vector:
-    pi = correct_stationary_vector(VEq)
-    # Construct the A-matrix:
-    veq_row_sum = np.sum(np.dot(np.diag(sigma / pi), VEq), axis=0)
-    A = np.dot(VEq, np.diag(veq_row_sum*l))
-    # Solve the linear system:
-    theta = scl.lstsq(A, ptau)[0]
-    # Find negative entries:
-    neg_ind = theta < 0
-    if theta[neg_ind].shape[0] > 0:
-        print "Warning: Negative entries in theta, maximal modulus is %.e"%(np.max(np.abs(theta[neg_ind])))
-        theta[neg_ind] = -theta[neg_ind]
-    # Correct:
-    VEq_cor = np.dot(VEq, np.diag(np.sqrt(theta)))
-    Ctau = np.dot(VEq_cor, np.dot(np.diag(l), VEq_cor.T))
-    return Ctau, pi
