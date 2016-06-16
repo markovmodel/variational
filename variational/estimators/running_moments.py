@@ -164,6 +164,11 @@ class RunningCovar(object):
         Depth of Moment storage. Moments computed from each chunk will be
         combined with Moments of similar statistical weight using the pairwise
         combination algorithm described in [1]_.
+    sparse_mode : str
+        one of:
+            * 'dense' : always use dense mode
+            * 'sparse' : always use sparse mode if possible
+            * 'auto' : automatic
 
     References
     ----------
@@ -219,7 +224,6 @@ class RunningCovar(object):
             weight.
 
         """
-
         # check input
         T = X.shape[0]
         if Y is not None:
@@ -263,7 +267,7 @@ class RunningCovar(object):
         else:  # compute block
             assert Y is not None
             assert not self.symmetrize
-            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean)
+            w, s, C = moments_block(X, Y, remove_mean=self.remove_mean, sparse_mode=self.sparse_mode)
             # make copy in order to get independently mergeable moments
             self.storage_XX.store(Moments(w, s[0], s[0], C[0, 0]))
             self.storage_XY.store(Moments(w, s[0], s[1], C[0, 1]))
@@ -353,6 +357,11 @@ def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=Fal
         Depth of Moment storage. Moments computed from each chunk will be
         combined with Moments of similar statistical weight using the pairwise
         combination algorithm described in [1]_.
+    sparse_mode : str
+        one of:
+            * 'dense' : always use dense mode
+            * 'sparse' : always use sparse mode if possible
+            * 'auto' : automatic
 
     References
     ----------
@@ -361,3 +370,4 @@ def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=Fal
     """
     return RunningCovar(compute_XX=xx, compute_XY=xy, compute_YY=yy, time_lagged=time_lagged, lag=lag,
                         remove_mean=remove_mean, symmetrize=symmetrize, nsave=nsave)
+

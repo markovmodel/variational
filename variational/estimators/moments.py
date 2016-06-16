@@ -432,6 +432,11 @@ def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst, weig
         Unnormalized covariance matrix.
 
     """
+    # check input
+    if mask_X is None:
+        mask_X = np.ones(Xvar.shape[1], dtype=np.bool)
+    if (mask_Y is None):
+        mask_Y = np.ones(Yvar.shape[1], dtype=np.bool)
     C = np.zeros((len(mask_X), len(mask_Y)))
     # Block 11
     C[np.ix_(mask_X, mask_Y)] = _M2_dense(Xvar, Yvar, weights=weights)
@@ -461,6 +466,11 @@ def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst, weig
 
 def _M2_sparse(Xvar, mask_X, Yvar, mask_Y, weights=None):
     """ 2nd moment matrix exploiting zero input columns """
+    # check input
+    if mask_X is None:
+        mask_X = np.ones(Xvar.shape[1], dtype=np.bool)
+    if (mask_Y is None):
+        mask_Y = np.ones(Yvar.shape[1], dtype=np.bool)
     C = np.zeros((len(mask_X), len(mask_Y)))
     C[np.ix_(mask_X, mask_Y)] = _M2_dense(Xvar, Yvar, weights=weights)
     return C
