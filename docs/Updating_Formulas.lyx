@@ -1,0 +1,657 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\begin_modules
+theorems-ams
+eqs-within-sections
+figs-within-sections
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Updating Formulas for Correlations
+\end_layout
+
+\begin_layout Standard
+Here, we collect updating formulas for correlations between time series:
+\end_layout
+
+\begin_layout Section
+General Time Series
+\end_layout
+
+\begin_layout Standard
+The standard case is to compute the correlation between two time series
+ 
+\begin_inset Formula $x_{t}(i),\, t=1,\ldots,T,\, i=1,\ldots,N$
+\end_inset
+
+, and 
+\begin_inset Formula $y_{t}(i),\, t=1,\ldots,T,\, i=1,\ldots,N$
+\end_inset
+
+.
+ Additionally, it is possible that weights are given for each time step,
+ i.e.
+ there are non-negative number 
+\begin_inset Formula $w_{t},\, t=1,\ldots,T$
+\end_inset
+
+.
+ Our goal then is to compute the (unnormalized) correlation
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+C(i,j) & = & \sum_{t=1}^{T}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{y}(j)\right),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\bar{x}(i),\,\bar{y}(j)$
+\end_inset
+
+ denote the weighted mean values of the time series, i.e.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\overline{x}(i) & = & \frac{1}{W_{T}}\sum_{t=1}^{T}w_{t}x_{t}(i),\\
+W_{T} & = & \sum_{t=1}^{T}w_{t}.
+\end{eqnarray*}
+
+\end_inset
+
+We are interested in computing the correlation 
+\begin_inset Formula $C(i,j)$
+\end_inset
+
+ in chunks.
+ That means we split the data into, say, two blocks 
+\begin_inset Formula $x_{t}(i),\, t=1,\ldots,T_{1}$
+\end_inset
+
+, and 
+\begin_inset Formula $x_{t}(i),\, t=T_{1}+1,\ldots,T_{2}=T,$
+\end_inset
+
+ and the same for 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+.
+ We would then like to compute the correlation of each chunk separately,
+ sum them up and add a correction term.
+ Let us introduce the following notation
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\overline{x_{T_{1}}}(i) & = & \frac{1}{w_{T_{1}}}\sum_{t=1}^{T_{1}}w_{t}x_{t},\label{eq:chunk_definitions_0}\\
+\overline{x_{T_{2}}}(i) & = & \frac{1}{W_{T_{2}}}\sum_{t=T_{1}+1}^{T_{2}}w_{t}x_{t}\label{eq:chunk_definitions_1}\\
+W_{T_{1}} & = & \sum_{t=1}^{T_{1}}w_{t}\label{eq:chunk_definitions_2}\\
+W_{T_{2}} & = & \sum_{t=T_{1}+1}^{T_{2}}w_{t}\label{eq:chunk_definitions_3}\\
+S_{T_{1}}(i,j) & = & \sum_{t=1}^{T_{1}}\left(x_{t}(i)-\overline{x_{T_{1}}}(i)\right)\left(y_{t}(j)-\overline{y_{T_{1}}}(j)\right)\label{eq:chunk_definitions_4}\\
+S_{T_{2}}(i,j) & = & \sum_{t=T_{1}+1}^{T_{2}}\left(x_{t}(i)-\overline{x_{T_{2}}}(i)\right)\left(y_{t}(j)-\overline{y_{T_{2}}}(j)\right).\label{eq:chunk_definitions_5}
+\end{eqnarray}
+
+\end_inset
+
+Now, the calculations from section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Proofs"
+
+\end_inset
+
+ show that the full correlation 
+\begin_inset Formula $C(i,j)$
+\end_inset
+
+ can be computed as
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+C(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+\frac{W_{T_{1}}W_{T_{2}}}{W_{T}}\left(\overline{x_{T_{2}}}(i)-\overline{x_{T_{1}}}(i)\right)\left(\overline{y_{T_{2}}}(j)-\overline{y_{T_{1}}}(j)\right)\label{eq:Update_Standard}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Symmetrization
+\end_layout
+
+\begin_layout Standard
+In some cases, a symmetric correlation matrix is desired, for example if
+ 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+ is a time-lagged version of 
+\begin_inset Formula $x_{t}$
+\end_inset
+
+.
+ This can be achieved by redefining the means
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\overline{x}(i) & = & \frac{1}{2W_{T}}\left[\sum_{t=1}^{T}w_{t}x_{t}(i)+\sum_{t=1}^{T}w_{t}y_{t}(i)\right],
+\end{eqnarray*}
+
+\end_inset
+
+and defining the symmetrized correlation by
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+C_{s}(i,j) & = & \sum_{t=1}^{T}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{x}(j)\right)\\
+ &  & +\sum_{t=1}^{T}w_{t}\left(y_{t}(i)-\overline{x}(i)\right)\left(x_{t}(j)-\overline{x}(j)\right).
+\end{eqnarray*}
+
+\end_inset
+
+Using the analogues of Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:chunk_definitions_0"
+
+\end_inset
+
+-
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:chunk_definitions_5"
+
+\end_inset
+
+, we arrive at the updating formula
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+C_{s}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+\frac{2W_{T_{1}}W_{T_{2}}}{W_{T}}\left(\overline{x_{T_{2}}}(i)-\overline{x_{T_{1}}}(i)\right)\left(\overline{x_{T_{2}}}(j)-\overline{x_{T_{1}}}(j)\right),\label{eq:Updata_Sym}
+\end{eqnarray}
+
+\end_inset
+
+see again section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Proofs"
+
+\end_inset
+
+.
+ Please note that for time-lagged data, 
+\begin_inset Formula $T_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $T_{2}$
+\end_inset
+
+ must be changed to 
+\begin_inset Formula $T_{1}-\tau$
+\end_inset
+
+ and 
+\begin_inset Formula $T_{2}-\tau$
+\end_inset
+
+, such that the first 
+\begin_inset Formula $\tau$
+\end_inset
+
+ steps of every chunk only appear in 
+\begin_inset Formula $x_{t}$
+\end_inset
+
+, while the last 
+\begin_inset Formula $\tau$
+\end_inset
+
+ steps only appear in 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Time-lagged Data without Symmetrization
+\end_layout
+
+\begin_layout Standard
+If we assume to be given a time-series 
+\begin_inset Formula $\tilde{x_{t}}(i),\, t=1,\ldots,T+\tau$
+\end_inset
+
+, and define the time-lagged time-series 
+\begin_inset Formula $x_{t}(i)=\tilde{x}_{t}(i),\, t=1,\ldots T$
+\end_inset
+
+ and 
+\begin_inset Formula $y_{t}(i)=\tilde{x}_{t+\tau},\, t=1,\ldots T$
+\end_inset
+
+.
+ If we do not wish to symmetrize the correlations, it seems most consistent
+ to use the weights of the first 
+\begin_inset Formula $T$
+\end_inset
+
+ steps, 
+\begin_inset Formula $w_{t},\, t=1,\ldots,T$
+\end_inset
+
+, only.
+ The means are thus defined by
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\overline{x}(i) & = & \frac{1}{W_{T}}\sum_{t=1}^{T}w_{t}x_{t}(i)\\
+\overline{y}(i) & = & \frac{1}{W_{T}}\sum_{t=1}^{T}w_{t}y_{t}(i)\\
+ & = & \frac{1}{W_{T}}\sum_{t=\tau}^{T+\tau}w_{t-\tau}\tilde{x}_{t}\\
+W_{T} & = & \sum_{t=1}^{T}w_{t}.
+\end{eqnarray*}
+
+\end_inset
+
+The asymmetric correlation then becomes
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+C_{a}(i,j) & = & \sum_{t=1}^{T}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{y}(j)\right).
+\end{eqnarray*}
+
+\end_inset
+
+Using the analogues of Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:chunk_definitions_0"
+
+\end_inset
+
+-
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:chunk_definitions_5"
+
+\end_inset
+
+, we find the updating formula for time-lagged data to be the same as Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Update_Standard"
+
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+C_{a}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+\frac{W_{T_{1}}W_{T_{2}}}{W_{T}}\left(\overline{x_{T_{2}}}(i)-\overline{x_{T_{1}}}(i)\right)\left(\overline{y_{T_{2}}}(j)-\overline{y_{T_{1}}}(j)\right)\label{eq:Update_Asym}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Conclusions
+\end_layout
+
+\begin_layout Standard
+We have shown that mean-free correlations can be easily computed in chunks
+ for arbitrary time series 
+\begin_inset Formula $x_{t}$
+\end_inset
+
+, 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+, including time-dependent weights.
+ Moreover, symmetrized mean-free correlations can be computed for arbitrary
+ time-series, which can also be time-lagged copies.
+ Finally, we found that for time-lagged time series which are not supposed
+ to be symmetrized, it seems to make sense to compute the means using the
+ weights of the first 
+\begin_inset Formula $T$
+\end_inset
+
+ steps.
+\end_layout
+
+\begin_layout Section
+Proofs
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Proofs"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+First, we determine an expression for the full correlation in terms of the
+ partial sums 
+\begin_inset Formula $S_{T_{1}},\, S_{T_{2}}$
+\end_inset
+
+ and a correction term for all cases considered here.
+ We will see then that the correction term can be expressed in the forms
+ given in Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Update_Standard"
+
+\end_inset
+
+, 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Updata_Sym"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Update_Asym"
+
+\end_inset
+
+.
+ Let us consider the standard case:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+C(i,j) & = & \sum_{t=1}^{T}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{y}(j)\right)\label{eq:Splitting_Cij_0}\\
+ & = & \sum_{t=1}^{T_{1}}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{y}(j)\right)\nonumber \\
+ &  & +\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(x_{t}(i)-\overline{x}(i)\right)\left(y_{t}(j)-\overline{y}(j)\right)\label{eq:Splitting_Cij_1}\\
+ & = & \sum_{t=1}^{T_{1}}w_{t}\left(\left(x_{t}(i)-\overline{x_{T_{1}}}(i)\right)-\gamma_{1}^{x}(i)\right)\left(\left(y_{t}(j)-\overline{y_{T_{1}}}(j)\right)-\gamma_{1}^{y}(j)\right)\nonumber \\
+ &  & +\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(\left(x_{t}(i)-\overline{x_{T_{2}}}(i)\right)-\gamma_{2}^{x}(i)\right)\left(\left(y_{t}(j)-\overline{y_{T_{2}}}(j)\right)-\gamma_{2}^{y}(j)\right),\label{eq:Splitting_Cij_2}
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $\gamma_{k}^{x}(i)=\overline{x}(i)-\overline{x_{T_{k}}}(i)$
+\end_inset
+
+ and 
+\begin_inset Formula $\gamma_{k}^{y}(i)=\overline{y}(i)-\overline{y_{T_{k}}}(i)$
+\end_inset
+
+.
+ We proceed to find
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+C(i,j) & = & \sum_{t=1}^{T_{1}}w_{t}\left(x_{t}(i)-\overline{x_{T_{1}}}(i)\right)\left(y_{t}(j)-\overline{y_{T_{1}}}(j)\right)-\gamma_{1}^{x}(i)\left(y_{t}(j)-\overline{y_{T_{1}}}(j)\right)\nonumber \\
+ &  & -\gamma_{1}^{y}(j)\left(x_{t}(i)-\overline{x_{T_{1}}}(i)\right)+\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)\nonumber \\
+ &  & +\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(x_{t}(i)-\overline{x_{T_{2}}}(i)\right)\left(y_{t}(j)-\overline{y_{T_{2}}}(j)\right)-\gamma_{2}^{x}(i)\left(y_{t}(j)-\overline{y_{T_{2}}}(j)\right)\nonumber \\
+ &  & -\gamma_{2}^{y}(j)\left(x_{t}(i)-\overline{x_{T_{2}}}(i)\right)+\gamma_{2}^{x}(i)\gamma_{2}^{y}(j)\label{eq:Splitting_Cij_3}\\
+ & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+W_{T_{1}}\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)+W_{T_{2}}\gamma_{2}^{x}(i)\gamma_{2}^{y}(j).\label{eq:Splitting_Cij_4}
+\end{eqnarray}
+
+\end_inset
+
+It remains to deal with the term:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+W_{T_{1}}\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)+W_{T_{2}}\gamma_{2}^{x}(i)\gamma_{2}^{y}(j) & = & W_{T_{1}}\left(\overline{x}(i)\overline{y}(j)-\overline{x}(i)\overline{y_{T_{1}}}(j)-\overline{x_{T_{1}}}(i)\overline{y}(j)+\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)\right)\nonumber \\
+ &  & +W_{T_{2}}\left(\overline{x}(i)\overline{y}(j)-\overline{x}(i)\overline{y_{T_{2}}}(j)-\overline{x_{T_{2}}}(i)\overline{y}(j)+\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)\right)\label{eq:Gamma_Reformulation_0}\\
+ & = & \left(W_{T_{1}}+W_{T_{2}}\right)\overline{x}(i)\overline{y}(j)+W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)\nonumber \\
+ &  & +W_{T_{2}}\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)-\overline{x}(i)\left(W_{T_{1}}\overline{y_{T_{1}}}(j)+W_{T_{2}}\overline{y_{T_{2}}}(j)\right)\nonumber \\
+ &  & -\overline{y}(j)\left(W_{T_{1}}\overline{x_{T_{1}}}(i)+W_{T_{2}}\overline{x_{T_{2}}}(i)\right).\label{eq:Gamma_Reformulation_1}
+\end{eqnarray}
+
+\end_inset
+
+Now, we use that 
+\begin_inset Formula $W_{T_{1}}\overline{x_{T_{1}}}(i)+W_{T_{2}}\overline{x_{T_{2}}}(i)=W_{T}\overline{x}(i)$
+\end_inset
+
+ to find:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+ & = & W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)++W_{T_{2}}\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)\nonumber \\
+ &  & -\overline{x}(i)\left(W_{T_{1}}\overline{y_{T_{1}}}(j)+W_{T_{2}}\overline{y_{T_{2}}}(j)\right)\label{eq:Gamma_Reformulation_2}\\
+ & = & \frac{1}{W_{T}}\left[W_{T}\left(W_{T_{1}}\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)++W_{T_{2}}\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)\right)\right]\nonumber \\
+ &  & -\frac{1}{W_{T}}\left[W_{T}\overline{x}(i)\left(W_{T_{1}}\overline{y_{T_{1}}}(j)+W_{T_{2}}\overline{y_{T_{2}}}(j)\right)\right]\label{eq:Gamma_Reformulation_3}\\
+ & = & \frac{W_{T_{1}}W_{T_{2}}}{W_{T}}\left[\overline{x_{T_{1}}}(i)\overline{y_{T_{1}}}(j)+\overline{x_{T_{2}}}(i)\overline{y_{T_{2}}}(j)-\overline{x_{T_{1}}}(i)\overline{y_{T_{2}}}(j)-\overline{x_{T_{2}}}(i)\overline{y_{T_{1}}}(j)\right].\label{eq:Gamma_Reformulation_4}
+\end{eqnarray}
+
+\end_inset
+
+This completes the proof of Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Update_Standard"
+
+\end_inset
+
+.
+ For the symmetric case, the procedure from Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Splitting_Cij_0"
+
+\end_inset
+
+-
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Splitting_Cij_4"
+
+\end_inset
+
+ can be repeated to come up with the expression
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+C_{s}(i,j) & = & S_{T_{1}}(i,j)+S_{T_{2}}(i,j)+W_{T_{1}}\left(\gamma_{1}(i)\gamma_{1}(j)+\gamma_{1}(j)\gamma_{1}(i)\right)\\
+ &  & +W_{T_{2}}\left(\gamma_{2}(i)\gamma_{2}(j)+\gamma_{2}(j)\gamma_{2}(i)\right),
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\gamma_{k}(i)=\overline{x}(i)-\overline{x_{T_{k}}}(i)$
+\end_inset
+
+.
+ Then, the steps of Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Gamma_Reformulation_0"
+
+\end_inset
+
+-
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Gamma_Reformulation_3"
+
+\end_inset
+
+ can be repeated in the same way.
+ For the asymmetric case, Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Splitting_Cij_0"
+
+\end_inset
+
+-
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Splitting_Cij_4"
+
+\end_inset
+
+ yield the expression
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+C_{a}(i,j) & = & S_{T_{!}}(i,j)+S_{T_{2}}(i,j)+W_{T_{1}}\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)+W_{T_{2}}\gamma_{2}^{x}(i)\gamma_{2}^{y}(j)\\
+ &  & -\gamma_{1}^{x}(i)\sum_{t=1}^{T_{1}}w_{t}\left(y_{t}(j)-\overline{y_{T_{1}}}(j)\right)-\gamma_{1}^{y}(j)\sum_{t=1}^{T_{1}}w_{t}\left(x_{t}(i)-\overline{x_{T_{1}}}(i)\right)\\
+ &  & -\gamma_{2}^{x}(i)\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(y_{t}(j)-\overline{y_{T_{2}}}(j)\right)-\gamma_{2}^{y}(j)\sum_{t=T_{1}+1}^{T_{2}}w_{t}\left(x_{t}(i)-\overline{x_{T_{2}}}(i)\right).
+\end{eqnarray*}
+
+\end_inset
+
+Here, we have used 
+\begin_inset Formula $\gamma_{k}^{x}(i)=\overline{x}(i)-\overline{x_{T_{k}}}(i),\,\gamma_{k}^{y}(i)=\overline{y}(i)-\overline{y_{T_{k}}}(i)$
+\end_inset
+
+.
+ The cross-terms cancel out and the expression 
+\begin_inset Formula $W_{T_{1}}\gamma_{1}^{x}(i)\gamma_{1}^{y}(j)+W_{T_{2}}\gamma_{2}^{x}(i)\gamma_{2}^{y}(j)$
+\end_inset
+
+ can be reformulated through Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Gamma_Reformulation_0"
+
+\end_inset
+
+-
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Gamma_Reformulation_4"
+
+\end_inset
+
+ to end up with Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:Update_Asym"
+
+\end_inset
+
+.
+\end_layout
+
+\end_body
+\end_document
