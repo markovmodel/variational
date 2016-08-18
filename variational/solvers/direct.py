@@ -77,7 +77,7 @@ def eig_corr(C0, Ct, epsilon=1e-10):
     # so we select the truncation threshold such that everything that is negative vanishes
     evmin = np.min(s)
     if evmin < 0:
-        epsilon = max(epsilon, -evmin + 1e-16)
+        epsilon = max(epsilon, -evmin + 1e-12)
 
     # determine effective rank m and perform low-rank approximations.
     evnorms = np.abs(s)

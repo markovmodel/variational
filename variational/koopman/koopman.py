@@ -97,7 +97,7 @@ def reweight_trajectory(X, est, U, u, add_constant=False):
     est.add(X, weights=w)
     return est
 
-def equilibrium_correlation(est, K, rcond=1e-12):
+def equilibrium_correlation(est, K):
     """
     Compute equilibrium correlation matrices from re-weighted data.
 
@@ -116,13 +116,15 @@ def equilibrium_correlation(est, K, rcond=1e-12):
         the equilibrium time-lagged correlation matrix.
 
     """
-    # Get C0:
-    C0 = est.moments_XX() / est.weight_XX()
-    # Compute its inverse:
-    C0_inv = scl.pinv(C0, rcond=rcond)
-    SK = np.dot(C0, K)
-    Ktilde = 0.5*np.dot(C0_inv, SK + SK.T)
-    Ct = np.dot(C0, Ktilde)
-    return C0, Ct
+    # Get Sigma:
+    Sigma = est.moments_XX() / est.weight_XX()
+    # Compute Sigma*K
+    SK = np.dot(Sigma, K)
+    # Symmetrize
+    Ctau_mu = 0.5*(SK + SK.T)
+    # Also return K_eq for reference:
+    Sigma_inv = scl.pinv(Sigma)
+    K_new = np.dot(Sigma_inv, Ctau_mu)
+    return Sigma, Ctau_mu, K_new
 
 

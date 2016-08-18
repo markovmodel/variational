@@ -20,23 +20,23 @@ def filter_eigenvalues(l, R=None, ep=0.36, ep1=1e-2, ep_im=0.0):
         tolerance governing how much of an imaginary part is accepted to due statistical noise.
     """
     # Remove meaningless eigenvalues:
-    ind1 = np.where(np.logical_and(l <= 1 + ep1, l >= ep))[0]
+    ind1 = np.where(np.logical_and(np.real(l) <= 1 + ep1, np.real(l) >= ep))[0]
     l = l[ind1]
     if R is not None:
         R = R[:, ind1]
     # Remove eigenvalues with imaginary part greater than ep_im:
-    ind2 = np.where(np.abs(np.imag(l)) <= ep_im)[0]
-    l = l[ind2]
-    if R is not None:
-        R = R[:, ind2]
+    #ind2 = np.where(np.abs(np.imag(l)) <= ep_im)[0]
+    #l = l[ind2]
+    #if R is not None:
+    #    R = R[:, ind2]
     # Discard all imaginary parts:
-    l = np.real(l)
-    if R is not None:
-        R = np.real(R)
+    #l = np.real(l)
+    #if R is not None:
+    #    R = np.real(R)
     # Sort the eigenvalues:
-    ind3 = np.argsort(l)[::-1]
+    ind3 = np.argsort(np.real(l))[::-1]
     l = l[ind3]
-    ind_final = ind1[ind2[ind3]]
+    ind_final = ind1[[ind3]]
     if R is not None:
         R = R[:, ind3]
     if R is not None:
@@ -46,7 +46,7 @@ def filter_eigenvalues(l, R=None, ep=0.36, ep1=1e-2, ep_im=0.0):
 
 
 
-def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2, ep_im=1e-2):
+def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2, ep_im=1e-2, ep_svd=None):
     """
     Perform estimation of dominant system eigenvalues from short time simulations.
 
@@ -62,6 +62,8 @@ def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2, ep_im=1e-2):
         tolerance governing how much larger than one the eigenvalues are allowed to be.
     ep_im, float:
         tolerance governing how much of an imaginary part is accepted to due statistical noise.
+    ep_svd, float:
+        singular value cutoff for Ct.
 
     Returns:
     --------
@@ -74,26 +76,28 @@ def eigenvalue_estimation(Ct, C2t, ep=0.36, ep1=1e-2, ep_im=1e-2):
     # Get the SVD of Ctau:
     U, s, V = scl.svd(Ct, full_matrices=False)
     # Discard close-to-zero singular values:
-    ind = np.where(s > 1e-16)[0]
-    s = s[ind]
-    U = U[:, ind]
-    V = V[ind, :].transpose()
+    if ep_svd is None:
+        ep_svd = s > 1e-16
+    s = s[ep_svd]
+    U = U[:, ep_svd]
+    V = V[ep_svd, :].transpose()
     # Define transformation matrices:
     F1 = np.dot(U, np.diag(s**(-0.5)))
     F2 = np.dot(V, np.diag(s**(-0.5)))
     # Solve eigenvalue problem:
+    #W1 = np.dot(U.transpose(), np.dot(Ct, V))
     W = np.dot(F1.transpose(), np.dot(C2t, F2))
     l, R = scl.eig(W)
     # Compute VEq:
     Rp = scl.pinv(R)
     VEq = np.dot(np.diag(l**(-0.5)), np.dot(Rp, np.dot(F1.T, Ct)))
-    VEq = np.real(VEq.T)
+    VEq = VEq.T
     # Remove complex or meaningless eigenvalues:
     l, R, ind = filter_eigenvalues(l, R, ep=ep, ep1=ep1, ep_im=ep_im)
     VEq = VEq[:, ind]
     return l, VEq
 
-def oom_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
+def oom_estimation(Ct, C2t, ep_svd=None, ep=0.36, ep1=1e-2):
     """
     Perform steps from OOM-estimation method.
 
@@ -103,10 +107,11 @@ def oom_estimation(Ct, C2t, ep=0.36, ep1=1e-2):
     # Get the SVD of Ctau:
     U, s, V = scl.svd(Ct, full_matrices=False)
     # Discard close-to-zero singular values:
-    ind = np.where(s > 1e-16)[0]
-    s = s[ind]
-    U = U[:, ind]
-    V = V[ind, :].transpose()
+    if ep_svd is None:
+        ep_svd = s > 1e-16
+    s = s[ep_svd]
+    U = U[:, ep_svd]
+    V = V[ep_svd, :].transpose()
     # Define transformation matrices:
     F1 = np.dot(U, np.diag(s**(-0.5)))
     F2 = np.dot(V, np.diag(s**(-0.5)))

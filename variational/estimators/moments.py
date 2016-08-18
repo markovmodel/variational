@@ -435,8 +435,10 @@ def _M2_const(Xvar, mask_X, xvarsum, xconst, Yvar, mask_Y, yvarsum, yconst, weig
     # check input
     if mask_X is None:
         mask_X = np.ones(Xvar.shape[1], dtype=np.bool)
+        xconst = np.zeros(0)
     if (mask_Y is None):
         mask_Y = np.ones(Yvar.shape[1], dtype=np.bool)
+        yconst = np.zeros(0)
     C = np.zeros((len(mask_X), len(mask_Y)))
     # Block 11
     C[np.ix_(mask_X, mask_Y)] = _M2_dense(Xvar, Yvar, weights=weights)
@@ -482,6 +484,11 @@ def _M2_sparse_sym(Xvar, mask_X, Yvar, mask_Y, weights=None):
     Computes X'X + Y'Y and X'Y + Y'X
 
     """
+    # check input
+    if mask_X is None:
+        mask_X = np.ones(Xvar.shape[1], dtype=np.bool)
+    if (mask_Y is None):
+        mask_Y = np.ones(Yvar.shape[1], dtype=np.bool)
     assert len(mask_X) == len(mask_Y), 'X and Y need to have equal sizes for symmetrization'
 
     Cxxyy = np.zeros((len(mask_X), len(mask_Y)))
