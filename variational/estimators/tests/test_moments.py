@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import unittest
 import numpy as np
-from variational.estimators import moments
+from .. import moments
 
 __author__ = 'noe'
 

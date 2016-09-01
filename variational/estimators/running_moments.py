@@ -3,7 +3,7 @@ __author__ = 'noe'
 import warnings
 import numbers
 import numpy as np
-from variational.estimators.moments import moments_XX, moments_XXXY, moments_block
+from .moments import moments_XX, moments_XXXY, moments_block
 
 
 class Moments(object):
