@@ -342,7 +342,7 @@ class RunningCovar(object):
 
 
 def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=False, time_lagged=False,
-                  sparse_mode='auto', modify_data=False, nsave=5):
+                  sparse_mode='auto', modify_data=False, lag=1, nsave=5):
     """ Returns a running covariance estimator
 
     Returns an estimator object that can be fed chunks of X and Y data, and
@@ -371,6 +371,8 @@ def running_covar(xx=True, xy=False, yy=False, remove_mean=False, symmetrize=Fal
             * 'dense' : always use dense mode
             * 'sparse' : always use sparse mode if possible
             * 'auto' : automatic
+    lag : int, default=1
+        lag time between x and y
     nsave : int
         Depth of Moment storage. Moments computed from each chunk will be
         combined with Moments of similar statistical weight using the pairwise
