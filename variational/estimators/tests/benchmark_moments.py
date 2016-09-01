@@ -4,7 +4,7 @@ __author__ = 'noe'
 
 import time
 import numpy as np
-from variational.estimators import moments
+from .. import moments
 
 def genS(N):
     """ Generates sparsities given N (number of cols) """

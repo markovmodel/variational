@@ -77,7 +77,7 @@ __author__ = 'noe'
 
 import math, sys, numbers, warnings
 import numpy as np
-from variational.estimators.covar_c import covartools
+from .covar_c import covartools
 
 
 def _is_zero(x):
