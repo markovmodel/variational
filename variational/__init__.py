@@ -2,7 +2,7 @@ from __future__ import absolute_import
 __author__ = 'noe'
 
 # import subpackages such that they are available after the main package import
-rom . import estimators
+from . import estimators
 from . import solvers
 
 # direct imports of important functions/classes to-level API
