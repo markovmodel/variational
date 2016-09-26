@@ -11,3 +11,4 @@ dist
 # generated files
 variational/version.py
 variational/estimators/covar_c/covartools.c
+variational/solvers/qr_c/qr_solver.c
