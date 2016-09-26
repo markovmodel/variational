@@ -122,13 +122,19 @@ def find_package_data(data_root, package_root):
 
 def extensions():
     from numpy import get_include as np_inc
+    from scipy import get_include as sc_inc
     np_inc = np_inc()
+    sc_inc = sc_inc()
     from Cython.Build import cythonize
     exts = [Extension('variational.estimators.covar_c.covartools',
                          sources = ['./variational/estimators/covar_c/covartools.pyx',
                                     './variational/estimators/covar_c/_covartools.c'],
                          include_dirs = ['./variational/estimators/covar_c/', np_inc],
                          extra_compile_args=['-std=c99','-O3']),
+            Extension('variational.solvers.qr_c.qr_solver',
+                        sources=['./variational/solvers/qr_c/qr_solver.pyx'],
+                        include_dirs=['./variational/solvers/qr_c/', np_inc, sc_inc],
+                        extra_compile_args=['-std=c99','-O3'])
                ]
     return cythonize(exts)
 
