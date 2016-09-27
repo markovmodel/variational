@@ -33,23 +33,27 @@ class TestDirect(unittest.TestCase):
         C0 = np.array([[1.0, 0.3, 0.2],
                        [0.3, 0.8, 0.5],
                        [0.2, 0.5, 0.9]])
-        Ct = np.array([[0.5, 0.1, 0.0],
-                       [0.1, 0.3, 0.3],
-                       [0.0, 0.3, 0.2]])
+        Ct_sym = np.array([[0.5, 0.1, 0.0],
+                           [0.1, 0.3, 0.3],
+                           [0.0, 0.3, 0.2]])
+        Ct_nonsym = np.array([[0.5, 0.1, 0.0],
+                              [0.1, 0.3, 0.3],
+                              [0.0, 0.3, 0.2]])
         # reference solution
         import scipy
-        v0, R0 = scipy.linalg.eigh(Ct, C0)
-        v0, R0 = direct.sort_by_norm(v0, R0)
-        for method in ['QR', 'schur']:
-            # Test correctness
-            v, R = direct.eig_corr(C0, Ct, method=method)
-            assert np.allclose(v0, v)  # eigenvalues equal?
-            # eigenvectors equivalent?
-            for i in range(R0.shape[1]):
-                assert np.allclose(R0[:, i] / R0[0, i], R[:, i] / R[0, i])
-            # Test if eigenpair diagonalizes the Koopman matrix
-            K = np.dot(np.linalg.inv(C0), Ct)
-            assert np.allclose(K, R.dot(np.diag(v)).dot(np.linalg.inv(R)))
+        for Ct in [Ct_sym, Ct_nonsym]:
+            v0, R0 = scipy.linalg.eigh(Ct, C0)
+            v0, R0 = direct.sort_by_norm(v0, R0)
+            for method in ['QR', 'schur']:
+                # Test correctness
+                v, R = direct.eig_corr(C0, Ct, method=method)
+                assert np.allclose(v0, v)  # eigenvalues equal?
+                # eigenvectors equivalent?
+                for i in range(R0.shape[1]):
+                    assert np.allclose(R0[:, i] / R0[0, i], R[:, i] / R[0, i])
+                # Test if eigenpair diagonalizes the Koopman matrix
+                K = np.dot(np.linalg.inv(C0), Ct)
+                assert np.allclose(K, R.dot(np.diag(v)).dot(np.linalg.inv(R)))
 
 
 if __name__ == "__main__":
