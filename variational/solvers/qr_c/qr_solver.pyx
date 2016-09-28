@@ -2,6 +2,10 @@ import numpy as np
 cimport scipy.linalg.cython_lapack as scc
 
 def qr_solve(A):
+    # handle 1x1 case
+    if np.size(A) == 1:  # size can handle 1x1 arrays and numbers
+        return A*np.ones(1), np.ones((1, 1))
+
     cdef double[:,:] B = np.require(A, dtype=np.float64, requirements=["F", "A"])
     cdef int n=A.shape[0], lda=A.shape[0], info, lwork=-1
     cdef char[:] uplo = np.zeros(1, "S1")
