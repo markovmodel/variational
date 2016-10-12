@@ -63,8 +63,8 @@ def spd_inv_split(W, epsilon=1e-10, method='QR'):
         L = 1./_np.sqrt(W[0,0])
     else:
         if method.lower() == 'qr':
-            from variational import qr_solve
-            s, V = qr_solve(W)
+            from variational import eig_qr
+            s, V = eig_qr(W)
         # compute the Eigenvalues of C0 using Schur factorization
         elif method.lower() == 'schur':
             from scipy.linalg import schur
@@ -93,7 +93,7 @@ def spd_inv_split(W, epsilon=1e-10, method='QR'):
     return L
 
 
-def eig_corr(C0, Ct, epsilon=1e-10, method='QR'):
+def eig_corr(C0, Ct, epsilon=1e-10, method='QR', sign_maxelement=False):
     r""" Solve generalized eigenvalue problem with correlation matrices C0 and Ct
 
     Numerically robust solution of a generalized Hermitian (symmetric) eigenvalue
@@ -126,6 +126,9 @@ def eig_corr(C0, Ct, epsilon=1e-10, method='QR'):
 
         * 'QR': QR-based robust eigenvalue decomposition of W
         * 'schur': Schur decomposition of W
+    sign_maxelement : bool
+        If True, re-scale each eigenvector such that its entry with maximal absolute value
+        is positive.
 
 
     Returns
@@ -152,6 +155,12 @@ def eig_corr(C0, Ct, epsilon=1e-10, method='QR'):
 
     # transform the eigenvectors back to the old basis
     R = _np.dot(L, R_trans)
+
+    # Change signs of eigenvectors:
+    if sign_maxelement:
+        for j in range(R.shape[1]):
+            imax = _np.argmax(_np.abs(R[:, j]))
+            R[:, j] *= _np.sign(R[imax, j])
 
     # return result
     return l, R

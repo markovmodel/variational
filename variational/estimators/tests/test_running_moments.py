@@ -18,7 +18,7 @@ class TestRunningMoments(unittest.TestCase):
         # Number of chunks:
         cls.nchunks = cls.T / cls.L
         # Set a lag time for time-lagged tests:
-        cls.lag = 50
+        #cls.lag = 50
         # Weights references:
         cls.weights = np.random.rand(10000)
         # Trajectory weights:
@@ -76,114 +76,114 @@ class TestRunningMoments(unittest.TestCase):
 
         # direct calculation, time-lagged moments of X:
         # Standard moments:
-        cls.s_tlx = np.zeros(2)
-        cls.s_tly = np.zeros(2)
-        cls.Mxx_tl = np.zeros((2, 2))
-        cls.Mxy_tl = np.zeros((2, 2))
+        #cls.s_tlx = np.zeros(2)
+        #cls.s_tly = np.zeros(2)
+        #cls.Mxx_tl = np.zeros((2, 2))
+        #cls.Mxy_tl = np.zeros((2, 2))
         # Mean free moments:
-        cls.Mxx0_tl = np.zeros((2, 2))
-        cls.Mxy0_tl = np.zeros((2, 2))
+        #cls.Mxx0_tl = np.zeros((2, 2))
+        #cls.Mxy0_tl = np.zeros((2, 2))
         # Symmetric moments:
-        cls.s_tl_sym = np.zeros(2)
-        cls.Mxx_tl_sym = np.zeros((2, 2))
-        cls.Mxy_tl_sym = np.zeros((2, 2))
+        #cls.s_tl_sym = np.zeros(2)
+        #cls.Mxx_tl_sym = np.zeros((2, 2))
+        #cls.Mxy_tl_sym = np.zeros((2, 2))
         # Symmetric mean free moments:
-        cls.Mxx0_tl_sym = np.zeros((2, 2))
-        cls.Mxy0_tl_sym = np.zeros((2, 2))
+        #cls.Mxx0_tl_sym = np.zeros((2, 2))
+        #cls.Mxy0_tl_sym = np.zeros((2, 2))
         # Weighted moments:
-        cls.s_tlx_w = np.zeros(2)
-        cls.s_tly_w = np.zeros(2)
-        cls.Mxx_tl_w = np.zeros((2, 2))
-        cls.Mxy_tl_w = np.zeros((2, 2))
-        cls.wesum_tl = 0
+        #cls.s_tlx_w = np.zeros(2)
+        #cls.s_tly_w = np.zeros(2)
+        #cls.Mxx_tl_w = np.zeros((2, 2))
+        #cls.Mxy_tl_w = np.zeros((2, 2))
+        #cls.wesum_tl = 0
         # Weighted moments, integer trajectory weights:
-        cls.s_tl_wtraj = np.zeros(2)
-        cls.Mxx_tl_wtraj = np.zeros((2, 2))
-        cls.Mxy_tl_wtraj = np.zeros((2, 2))
-        cls.wesum_tl_traj = 0
+        #cls.s_tl_wtraj = np.zeros(2)
+        #cls.Mxx_tl_wtraj = np.zeros((2, 2))
+        #cls.Mxy_tl_wtraj = np.zeros((2, 2))
+        #cls.wesum_tl_traj = 0
         # Weighted mean free moments:
-        cls.Mxx0_tl_w = np.zeros((2, 2))
-        cls.Mxy0_tl_w = np.zeros((2, 2))
+        #cls.Mxx0_tl_w = np.zeros((2, 2))
+        #cls.Mxy0_tl_w = np.zeros((2, 2))
         # Symmetric weighted moments:
-        cls.s_tl_w_sym = np.zeros(2)
-        cls.Mxx_tl_w_sym = np.zeros((2, 2))
-        cls.Mxy_tl_w_sym = np.zeros((2, 2))
+        #cls.s_tl_w_sym = np.zeros(2)
+        #cls.Mxx_tl_w_sym = np.zeros((2, 2))
+        #cls.Mxy_tl_w_sym = np.zeros((2, 2))
         # Symmetric weighted mean free moments:
-        cls.Mxx0_tl_w_sym = np.zeros((2, 2))
-        cls.Mxy0_tl_w_sym = np.zeros((2, 2))
+        #cls.Mxx0_tl_w_sym = np.zeros((2, 2))
+        #cls.Mxy0_tl_w_sym = np.zeros((2, 2))
 
 
-        q = 0
-        for i in range(0, cls.T, cls.L):
+        #q = 0
+        #for i in range(0, cls.T, cls.L):
             # Non-symmetric version:
-            iX = cls.X[i:i+cls.L, :]
-            iwe = cls.weights[i:i+cls.L]
-            cls.Mxx_tl += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :])
-            cls.Mxy_tl += np.dot(iX[:-cls.lag, :].T, iX[cls.lag:, :])
-            cls.s_tlx += np.sum(iX[:-cls.lag, :], axis=0)
-            cls.s_tly += np.sum(iX[cls.lag:, :], axis=0)
+            #iX = cls.X[i:i+cls.L, :]
+            #iwe = cls.weights[i:i+cls.L]
+            #cls.Mxx_tl += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :])
+            #cls.Mxy_tl += np.dot(iX[:-cls.lag, :].T, iX[cls.lag:, :])
+            #cls.s_tlx += np.sum(iX[:-cls.lag, :], axis=0)
+            #cls.s_tly += np.sum(iX[cls.lag:, :], axis=0)
             # Symmetric version:
-            cls.Mxx_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :]) + np.dot(iX[cls.lag:, :].T, iX[cls.lag:, :])
-            cls.Mxy_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[cls.lag:, :]) + np.dot(iX[cls.lag:, :].T, iX[:-cls.lag, :])
-            cls.s_tl_sym += np.sum(iX[:-cls.lag, :], axis=0) + np.sum(iX[cls.lag:, :], axis=0)
+            #cls.Mxx_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :]) + np.dot(iX[cls.lag:, :].T, iX[cls.lag:, :])
+            #cls.Mxy_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[cls.lag:, :]) + np.dot(iX[cls.lag:, :].T, iX[:-cls.lag, :])
+            #cls.s_tl_sym += np.sum(iX[:-cls.lag, :], axis=0) + np.sum(iX[cls.lag:, :], axis=0)
 
             # Weighted version:
-            cls.Mxx_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :])
-            cls.Mxy_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[cls.lag:, :])
-            cls.s_tlx_w += np.sum((iwe[:-cls.lag, None] * iX[:-cls.lag, :]), axis=0)
-            cls.s_tly_w += np.sum((iwe[:-cls.lag, None] * iX[cls.lag:, :]), axis=0)
-            cls.wesum_tl += np.sum(iwe[:-cls.lag])
-            # Weighted symmetric version:
-            cls.s_tl_w_sym += np.sum((iwe[:-cls.lag, None] * iX[:-cls.lag, :]), axis=0) +\
-                              np.sum((iwe[:-cls.lag, None] * iX[cls.lag:, :]), axis=0)
-            cls.Mxx_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :]) +\
-                                np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[cls.lag:, :])
-            cls.Mxy_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[cls.lag:, :]) +\
-                                np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[:-cls.lag, :])
-            # Weighted version, integer weights for trajectories:
-            cls.s_tl_wtraj += np.sum((cls.trajweights[q] * iX[:-cls.lag, :]), axis=0)
-            cls.Mxx_tl_wtraj += np.dot((cls.trajweights[q] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :])
-            cls.Mxy_tl_wtraj += np.dot((cls.trajweights[q] * iX[:-cls.lag, :]).T, iX[cls.lag:, :])
-            cls.wesum_tl_traj += cls.trajweights[q] * (iX.shape[0] - cls.lag)
-            q += 1
-
-        # Compute the mean for the mean free versions and substract it:
-        cls.m_tlx = cls.s_tlx / (cls.T - cls.nchunks*cls.lag)
-        cls.m_tly = cls.s_tly / (cls.T - cls.nchunks*cls.lag)
-        cls.X0_tl = cls.X - cls.m_tlx
-        cls.Y0_tl = cls.X - cls.m_tly
-        cls.m_tl_sym = cls.s_tl_sym / (2*(cls.T - cls.nchunks*cls.lag))
-        cls.X0_tl_sym = cls.X - cls.m_tl_sym
-        # Weighted means:
-        cls.m_tlx_w = cls.s_tlx_w / cls.wesum_tl
-        cls.m_tly_w = cls.s_tly_w / cls.wesum_tl
-        cls.X0_tl_w = cls.X - cls.m_tlx_w
-        cls.Y0_tl_w = cls.X - cls.m_tly_w
-        cls.m_tl_w_sym = cls.s_tl_w_sym / (2*cls.wesum_tl)
-        cls.X0_tl_w_sym = cls.X - cls.m_tl_w_sym
-
-        for i in range(0, cls.T, cls.L):
-            # Standard, mean-free:
-            iX = cls.X0_tl[i:i+cls.L, :]
-            iY = cls.Y0_tl[i:i+cls.L, :]
-            iwe = cls.weights[i:i+cls.L]
-            cls.Mxx0_tl += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :])
-            cls.Mxy0_tl += np.dot(iX[:-cls.lag, :].T, iY[cls.lag:, :])
-            # Symmetric, mean-free
-            iX = cls.X0_tl_sym[i:i+cls.L, :]
-            cls.Mxx0_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :]) + np.dot(iX[cls.lag:, :].T, iX[cls.lag:, :])
-            cls.Mxy0_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[cls.lag:, :]) + np.dot(iX[cls.lag:, :].T, iX[:-cls.lag, :])
-            # Weighted, mean-free
-            iX = cls.X0_tl_w[i:i+cls.L, :]
-            iY = cls.Y0_tl_w[i:i+cls.L, :]
-            cls.Mxx0_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :])
-            cls.Mxy0_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iY[cls.lag:, :])
-            # Weighted, symmetric, mean-free
-            iX = cls.X0_tl_w_sym[i:i+cls.L, :]
-            cls.Mxx0_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :]) + \
-                                 np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[cls.lag:, :])
-            cls.Mxy0_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[cls.lag:, :]) + \
-                                 np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[:-cls.lag, :])
+        #     cls.Mxx_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :])
+        #     cls.Mxy_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[cls.lag:, :])
+        #     cls.s_tlx_w += np.sum((iwe[:-cls.lag, None] * iX[:-cls.lag, :]), axis=0)
+        #     cls.s_tly_w += np.sum((iwe[:-cls.lag, None] * iX[cls.lag:, :]), axis=0)
+        #     cls.wesum_tl += np.sum(iwe[:-cls.lag])
+        #     # Weighted symmetric version:
+        #     cls.s_tl_w_sym += np.sum((iwe[:-cls.lag, None] * iX[:-cls.lag, :]), axis=0) +\
+        #                       np.sum((iwe[:-cls.lag, None] * iX[cls.lag:, :]), axis=0)
+        #     cls.Mxx_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :]) +\
+        #                         np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[cls.lag:, :])
+        #     cls.Mxy_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[cls.lag:, :]) +\
+        #                         np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[:-cls.lag, :])
+        #     # Weighted version, integer weights for trajectories:
+        #     cls.s_tl_wtraj += np.sum((cls.trajweights[q] * iX[:-cls.lag, :]), axis=0)
+        #     cls.Mxx_tl_wtraj += np.dot((cls.trajweights[q] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :])
+        #     cls.Mxy_tl_wtraj += np.dot((cls.trajweights[q] * iX[:-cls.lag, :]).T, iX[cls.lag:, :])
+        #     cls.wesum_tl_traj += cls.trajweights[q] * (iX.shape[0] - cls.lag)
+        #     q += 1
+        #
+        # # Compute the mean for the mean free versions and substract it:
+        # cls.m_tlx = cls.s_tlx / (cls.T - cls.nchunks*cls.lag)
+        # cls.m_tly = cls.s_tly / (cls.T - cls.nchunks*cls.lag)
+        # cls.X0_tl = cls.X - cls.m_tlx
+        # cls.Y0_tl = cls.X - cls.m_tly
+        # cls.m_tl_sym = cls.s_tl_sym / (2*(cls.T - cls.nchunks*cls.lag))
+        # cls.X0_tl_sym = cls.X - cls.m_tl_sym
+        # # Weighted means:
+        # cls.m_tlx_w = cls.s_tlx_w / cls.wesum_tl
+        # cls.m_tly_w = cls.s_tly_w / cls.wesum_tl
+        # cls.X0_tl_w = cls.X - cls.m_tlx_w
+        # cls.Y0_tl_w = cls.X - cls.m_tly_w
+        # cls.m_tl_w_sym = cls.s_tl_w_sym / (2*cls.wesum_tl)
+        # cls.X0_tl_w_sym = cls.X - cls.m_tl_w_sym
+        #
+        # for i in range(0, cls.T, cls.L):
+        #     # Standard, mean-free:
+        #     iX = cls.X0_tl[i:i+cls.L, :]
+        #     iY = cls.Y0_tl[i:i+cls.L, :]
+        #     iwe = cls.weights[i:i+cls.L]
+        #     cls.Mxx0_tl += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :])
+        #     cls.Mxy0_tl += np.dot(iX[:-cls.lag, :].T, iY[cls.lag:, :])
+        #     # Symmetric, mean-free
+        #     iX = cls.X0_tl_sym[i:i+cls.L, :]
+        #     cls.Mxx0_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[:-cls.lag, :]) + np.dot(iX[cls.lag:, :].T, iX[cls.lag:, :])
+        #     cls.Mxy0_tl_sym += np.dot(iX[:-cls.lag, :].T, iX[cls.lag:, :]) + np.dot(iX[cls.lag:, :].T, iX[:-cls.lag, :])
+        #     # Weighted, mean-free
+        #     iX = cls.X0_tl_w[i:i+cls.L, :]
+        #     iY = cls.Y0_tl_w[i:i+cls.L, :]
+        #     cls.Mxx0_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :])
+        #     cls.Mxy0_tl_w += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iY[cls.lag:, :])
+        #     # Weighted, symmetric, mean-free
+        #     iX = cls.X0_tl_w_sym[i:i+cls.L, :]
+        #     cls.Mxx0_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[:-cls.lag, :]) + \
+        #                          np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[cls.lag:, :])
+        #     cls.Mxy0_tl_w_sym += np.dot((iwe[:-cls.lag, None] * iX[:-cls.lag, :]).T, iX[cls.lag:, :]) + \
+        #                          np.dot((iwe[:-cls.lag, None] * iX[cls.lag:, :]).T, iX[:-cls.lag, :])
         return cls
 
     def test_XX_withmean(self):
@@ -293,110 +293,110 @@ class TestRunningMoments(unittest.TestCase):
         assert np.allclose(cc.moments_XX(), self.Mxx0_sym_w)
         assert np.allclose(cc.moments_XY(), self.Mxy0_sym_w)
 
-    def test_XXXY_time_lagged_withmean(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=False,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :])
-        assert np.allclose(cc.weight_XY(), self.T - self.nchunks*self.lag)
-        assert np.allclose(cc.sum_X(), self.s_tlx)
-        assert np.allclose(cc.sum_Y(), self.s_tly)
-        assert np.allclose(cc.moments_XX(), self.Mxx_tl)
-        assert np.allclose(cc.moments_XY(), self.Mxy_tl)
-
-    def test_XXXY_time_lagged_meanfree(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=False,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :])
-        assert np.allclose(cc.weight_XY(), self.T - self.nchunks*self.lag)
-        assert np.allclose(cc.sum_X(), self.s_tlx)
-        assert np.allclose(cc.sum_Y(), self.s_tly)
-        assert np.allclose(cc.moments_XX(), self.Mxx0_tl)
-        assert np.allclose(cc.moments_XY(), self.Mxy0_tl)
-
-    def test_XXXY_weighted_time_lagged_withmean(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=False,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
-        assert np.allclose(cc.weight_XY(), self.wesum_tl)
-        assert np.allclose(cc.sum_X(), self.s_tlx_w)
-        assert np.allclose(cc.sum_Y(), self.s_tly_w)
-        assert np.allclose(cc.moments_XX(), self.Mxx_tl_w)
-        assert np.allclose(cc.moments_XY(), self.Mxy_tl_w)
-
-    def test_XXXY_weighted_time_lagged_meanfree(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=False,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
-        assert np.allclose(cc.weight_XY(), self.wesum_tl)
-        assert np.allclose(cc.sum_X(), self.s_tlx_w)
-        assert np.allclose(cc.sum_Y(), self.s_tly_w)
-        assert np.allclose(cc.moments_XX(), self.Mxx0_tl_w)
-        assert np.allclose(cc.moments_XY(), self.Mxy0_tl_w)
-
-    def test_XXXY_weighted_trajs_time_lagged_withmean(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=False,
-                                          time_lagged=True, lag=self.lag)
-        q = 0
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :], weights=self.trajweights[q])
-            q += 1
-        assert np.allclose(cc.weight_XY(), self.wesum_tl_traj)
-        assert np.allclose(cc.sum_X(), self.s_tl_wtraj)
-        assert np.allclose(cc.moments_XX(), self.Mxx_tl_wtraj)
-        assert np.allclose(cc.moments_XY(), self.Mxy_tl_wtraj)
-
-    def test_XXXY_sym_time_lagged_withmean(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=True,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :])
-        assert np.allclose(cc.weight_XY(), 2*(self.T - self.nchunks*self.lag))
-        assert np.allclose(cc.sum_X(), self.s_tl_sym)
-        assert np.allclose(cc.moments_XX(), self.Mxx_tl_sym)
-        assert np.allclose(cc.moments_XY(), self.Mxy_tl_sym)
-
-    def test_XXXY_sym_time_lagged_meanfree(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=True,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :])
-        assert np.allclose(cc.weight_XY(), 2*(self.T - self.nchunks*self.lag))
-        assert np.allclose(cc.sum_X(), self.s_tl_sym)
-        assert np.allclose(cc.moments_XX(), self.Mxx0_tl_sym)
-        assert np.allclose(cc.moments_XY(), self.Mxy0_tl_sym)
-
-    def test_XXXY_weighted_sym_time_lagged_withmean(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=True,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
-        assert np.allclose(cc.weight_XY(), 2*self.wesum_tl)
-        assert np.allclose(cc.sum_X(), self.s_tl_w_sym)
-        assert np.allclose(cc.moments_XX(), self.Mxx_tl_w_sym)
-        assert np.allclose(cc.moments_XY(), self.Mxy_tl_w_sym)
-
-    def test_XXXY_weighted_sym_time_lagged_meanfree(self):
-        # many passes
-        cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=True,
-                                          time_lagged=True, lag=self.lag)
-        for i in range(0, self.T, self.L):
-            cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
-        assert np.allclose(cc.weight_XY(), 2*self.wesum_tl)
-        assert np.allclose(cc.sum_X(), self.s_tl_w_sym)
-        assert np.allclose(cc.moments_XX(), self.Mxx0_tl_w_sym)
-        assert np.allclose(cc.moments_XY(), self.Mxy0_tl_w_sym)
+    # def test_XXXY_time_lagged_withmean(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=False,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :])
+    #     assert np.allclose(cc.weight_XY(), self.T - self.nchunks*self.lag)
+    #     assert np.allclose(cc.sum_X(), self.s_tlx)
+    #     assert np.allclose(cc.sum_Y(), self.s_tly)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx_tl)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy_tl)
+    #
+    # def test_XXXY_time_lagged_meanfree(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=False,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :])
+    #     assert np.allclose(cc.weight_XY(), self.T - self.nchunks*self.lag)
+    #     assert np.allclose(cc.sum_X(), self.s_tlx)
+    #     assert np.allclose(cc.sum_Y(), self.s_tly)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx0_tl)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy0_tl)
+    #
+    # def test_XXXY_weighted_time_lagged_withmean(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=False,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
+    #     assert np.allclose(cc.weight_XY(), self.wesum_tl)
+    #     assert np.allclose(cc.sum_X(), self.s_tlx_w)
+    #     assert np.allclose(cc.sum_Y(), self.s_tly_w)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx_tl_w)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy_tl_w)
+    #
+    # def test_XXXY_weighted_time_lagged_meanfree(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=False,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
+    #     assert np.allclose(cc.weight_XY(), self.wesum_tl)
+    #     assert np.allclose(cc.sum_X(), self.s_tlx_w)
+    #     assert np.allclose(cc.sum_Y(), self.s_tly_w)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx0_tl_w)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy0_tl_w)
+    #
+    # def test_XXXY_weighted_trajs_time_lagged_withmean(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=False,
+    #                                       time_lagged=True, lag=self.lag)
+    #     q = 0
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :], weights=self.trajweights[q])
+    #         q += 1
+    #     assert np.allclose(cc.weight_XY(), self.wesum_tl_traj)
+    #     assert np.allclose(cc.sum_X(), self.s_tl_wtraj)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx_tl_wtraj)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy_tl_wtraj)
+    #
+    # def test_XXXY_sym_time_lagged_withmean(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=True,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :])
+    #     assert np.allclose(cc.weight_XY(), 2*(self.T - self.nchunks*self.lag))
+    #     assert np.allclose(cc.sum_X(), self.s_tl_sym)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx_tl_sym)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy_tl_sym)
+    #
+    # def test_XXXY_sym_time_lagged_meanfree(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=True,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :])
+    #     assert np.allclose(cc.weight_XY(), 2*(self.T - self.nchunks*self.lag))
+    #     assert np.allclose(cc.sum_X(), self.s_tl_sym)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx0_tl_sym)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy0_tl_sym)
+    #
+    # def test_XXXY_weighted_sym_time_lagged_withmean(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=False, symmetrize=True,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
+    #     assert np.allclose(cc.weight_XY(), 2*self.wesum_tl)
+    #     assert np.allclose(cc.sum_X(), self.s_tl_w_sym)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx_tl_w_sym)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy_tl_w_sym)
+    #
+    # def test_XXXY_weighted_sym_time_lagged_meanfree(self):
+    #     # many passes
+    #     cc = running_moments.RunningCovar(compute_XX=True, compute_XY=True, remove_mean=True, symmetrize=True,
+    #                                       time_lagged=True, lag=self.lag)
+    #     for i in range(0, self.T, self.L):
+    #         cc.add(self.X[i:i+self.L, :], weights=self.weights[i:i+self.L])
+    #     assert np.allclose(cc.weight_XY(), 2*self.wesum_tl)
+    #     assert np.allclose(cc.sum_X(), self.s_tl_w_sym)
+    #     assert np.allclose(cc.moments_XX(), self.Mxx0_tl_w_sym)
+    #     assert np.allclose(cc.moments_XY(), self.Mxy0_tl_w_sym)
 
 if __name__ == "__main__":
     unittest.main()

@@ -131,9 +131,9 @@ def extensions():
                                     './variational/estimators/covar_c/_covartools.c'],
                          include_dirs = ['./variational/estimators/covar_c/', np_inc],
                          extra_compile_args=['-std=c99','-O3']),
-            Extension('variational.solvers.qr_c.qr_solver',
-                        sources=['./variational/solvers/qr_c/qr_solver.pyx'],
-                        include_dirs=['./variational/solvers/qr_c/', np_inc, sc_inc],
+            Extension('variational.solvers.eig_qr.eig_qr',
+                        sources=['./variational/solvers/eig_qr/eig_qr.pyx'],
+                        include_dirs=['./variational/solvers/eig_qr/', np_inc, sc_inc],
                         extra_compile_args=['-std=c99','-O3'])
                ]
     return cythonize(exts)
